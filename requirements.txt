@@ -1,0 +1,10 @@
+streamlit
+fpdf
+matplotlib
+pandas
+numpy
+sentence-transformers
+scikit-learn
+torch==2.2.2
+torchvision
+torchaudio

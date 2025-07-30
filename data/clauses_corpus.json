@@ -1,0 +1,122 @@
+[
+  {
+    "id": 1,
+    "text": "Solvency II Article 101 requires that capital be sufficient to cover 99.5% of annual risk.",
+    "category": "Capital Adequacy",
+    "jurisdiction": "EU"
+  },
+  {
+    "id": 2,
+    "text": "NAIC Risk-Based Capital (RBC) guidelines require tail-risk stress testing for catastrophe treaties.",
+    "category": "Risk-Based Capital",
+    "jurisdiction": "US"
+  },
+  {
+    "id": 3,
+    "text": "IFRS 17 mandates transparent reporting of expected losses and reinsurance recoverables.",
+    "category": "Accounting & Reporting",
+    "jurisdiction": "Global"
+  },
+  {
+    "id": 4,
+    "text": "Treaty coverage must align with the insurer’s capital buffer and retention strategy.",
+    "category": "Underwriting & Retention",
+    "jurisdiction": "Global"
+  },
+  {
+    "id": 5,
+    "text": "Excess-of-loss treaties require reinsurer participation to be well diversified.",
+    "category": "Diversification",
+    "jurisdiction": "Global"
+  },
+  {
+    "id": 6,
+    "text": "Catastrophe treaty exposures must pass 1-in-200 year Probable Maximum Loss (PML) stress tests.",
+    "category": "Catastrophe Risk",
+    "jurisdiction": "Global"
+  },
+  {
+    "id": 7,
+    "text": "Under Solvency II, ceded premium levels must not reduce the insurer’s Minimum Capital Requirement below thresholds.",
+    "category": "Capital Adequacy",
+    "jurisdiction": "EU"
+  },
+  {
+    "id": 8,
+    "text": "Reinsurance contracts should provide risk transfer under US SSAP No. 62 guidelines.",
+    "category": "Risk Transfer",
+    "jurisdiction": "US"
+  },
+  {
+    "id": 9,
+    "text": "Retrocession agreements must not concentrate exposure in a single reinsurer beyond 25% of total ceded risk.",
+    "category": "Diversification",
+    "jurisdiction": "Global"
+  },
+  {
+    "id": 10,
+    "text": "IFRS 17 requires discounting of future cash flows in reinsurance contract measurement.",
+    "category": "Accounting & Reporting",
+    "jurisdiction": "Global"
+  },
+  {
+    "id": 11,
+    "text": "Reinsurance contracts must contain clear terms for loss notification and settlement to satisfy audit requirements.",
+    "category": "Contract Clarity",
+    "jurisdiction": "Global"
+  },
+  {
+    "id": 12,
+    "text": "Quota share treaties must limit cessions to preserve primary insurer risk appetite and alignment.",
+    "category": "Underwriting & Retention",
+    "jurisdiction": "Global"
+  },
+  {
+    "id": 13,
+    "text": "All catastrophe treaties must comply with local solvency stress testing for hurricane and earthquake scenarios.",
+    "category": "Catastrophe Risk",
+    "jurisdiction": "Global"
+  },
+  {
+    "id": 14,
+    "text": "Under Solvency II, reinsurance recoverables must be adjusted for counterparty credit quality.",
+    "category": "Counterparty Risk",
+    "jurisdiction": "EU"
+  },
+  {
+    "id": 15,
+    "text": "NAIC requires reinsurers to be licensed or provide collateral for US credit for reinsurance treatment.",
+    "category": "Regulatory Compliance",
+    "jurisdiction": "US"
+  },
+  {
+    "id": 16,
+    "text": "Excess-of-loss treaties should consider reinstatement provisions to ensure multi-event protection.",
+    "category": "Contract Structure",
+    "jurisdiction": "Global"
+  },
+  {
+    "id": 17,
+    "text": "Reinsurance contracts must define occurrence limits for aggregation under IFRS 17 reporting.",
+    "category": "Accounting & Reporting",
+    "jurisdiction": "Global"
+  },
+  {
+    "id": 18,
+    "text": "Facultative placements must include due diligence on insured risk profiles to avoid anti-selection.",
+    "category": "Underwriting",
+    "jurisdiction": "Global"
+  },
+  {
+    "id": 19,
+    "text": "Climate change risk assessments should be incorporated into property catastrophe reinsurance treaties.",
+    "category": "Emerging Risk",
+    "jurisdiction": "Global"
+  },
+  {
+    "id": 20,
+    "text": "Reinsurance programs must be reviewed annually to confirm alignment with Board-approved risk appetite.",
+    "category": "Governance",
+    "jurisdiction": "Global"
+  }
+]

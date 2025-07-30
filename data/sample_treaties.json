@@ -1,0 +1,167 @@
+[
+  {
+    "id": 1,
+    "cedent": "ABC Insurance",
+    "peril": "Hurricane",
+    "line_of_business": "Property Cat XL",
+    "region": "Florida",
+    "exposure": 7500000,
+    "limit": 0.40,
+    "quota_share_cap": 0.60,
+    "notes": "High hurricane exposure; cat-excess reinsurance requested"
+  },
+  {
+    "id": 2,
+    "cedent": "XYZ Mutual",
+    "peril": "Earthquake",
+    "line_of_business": "Property Quota Share",
+    "region": "California",
+    "exposure": 5000000,
+    "limit": 0.35,
+    "quota_share_cap": 0.50,
+    "notes": "Regional insurer with moderate EQ exposure"
+  },
+  {
+    "id": 3,
+    "cedent": "Global P&C",
+    "peril": "Flood",
+    "line_of_business": "Aggregate Stop Loss",
+    "region": "US Midwest",
+    "exposure": 6200000,
+    "limit": 0.45,
+    "quota_share_cap": 0.55,
+    "notes": "Flood risk aggregation across multiple states"
+  },
+  {
+    "id": 4,
+    "cedent": "Sunrise Insurance",
+    "peril": "Wildfire",
+    "line_of_business": "Property Cat XL",
+    "region": "California",
+    "exposure": 4200000,
+    "limit": 0.50,
+    "quota_share_cap": 0.50,
+    "notes": "Wildfire-heavy portfolio; needs XL protection"
+  },
+  {
+    "id": 5,
+    "cedent": "Northern Shield",
+    "peril": "Winter Storm",
+    "line_of_business": "Property Aggregate XL",
+    "region": "Canada",
+    "exposure": 3000000,
+    "limit": 0.30,
+    "quota_share_cap": 0.40,
+    "notes": "Aggregate exposure from multiple winter storm events"
+  },
+  {
+    "id": 6,
+    "cedent": "Lakeside Mutual",
+    "peril": "Hail",
+    "line_of_business": "Property Cat XL",
+    "region": "Texas",
+    "exposure": 4800000,
+    "limit": 0.35,
+    "quota_share_cap": 0.55,
+    "notes": "High hail frequency in Tornado Alley region"
+  },
+  {
+    "id": 7,
+    "cedent": "Pacific Assurance",
+    "peril": "Tsunami",
+    "line_of_business": "Excess of Loss",
+    "region": "Japan",
+    "exposure": 12000000,
+    "limit": 0.50,
+    "quota_share_cap": 0.40,
+    "notes": "Tsunami-prone coastline; requires multi-event protection"
+  },
+  {
+    "id": 8,
+    "cedent": "Euro Allianz",
+    "peril": "Windstorm",
+    "line_of_business": "Property Cat XL",
+    "region": "Western Europe",
+    "exposure": 10000000,
+    "limit": 0.45,
+    "quota_share_cap": 0.60,
+    "notes": "European windstorm portfolio; seasonal reinsurance"
+  },
+  {
+    "id": 9,
+    "cedent": "Southern General",
+    "peril": "Hurricane",
+    "line_of_business": "Quota Share",
+    "region": "Gulf Coast",
+    "exposure": 6500000,
+    "limit": 0.35,
+    "quota_share_cap": 0.55,
+    "notes": "Quota share for hurricane season; cedent retains 45%"
+  },
+  {
+    "id": 10,
+    "cedent": "Great Lakes Insurance",
+    "peril": "Flood",
+    "line_of_business": "Aggregate Stop Loss",
+    "region": "Great Lakes",
+    "exposure": 5400000,
+    "limit": 0.40,
+    "quota_share_cap": 0.50,
+    "notes": "Flood accumulation from lake overflow and rainfall"
+  },
+  {
+    "id": 11,
+    "cedent": "Midwest Farm Mutual",
+    "peril": "Hail",
+    "line_of_business": "Aggregate Stop Loss",
+    "region": "US Midwest",
+    "exposure": 2800000,
+    "limit": 0.30,
+    "quota_share_cap": 0.45,
+    "notes": "Crop hail insurance; aggregate reinsurance required"
+  },
+  {
+    "id": 12,
+    "cedent": "Atlantic Coastal",
+    "peril": "Hurricane",
+    "line_of_business": "Property Cat XL",
+    "region": "US East Coast",
+    "exposure": 8700000,
+    "limit": 0.50,
+    "quota_share_cap": 0.60,
+    "notes": "High-value coastal properties; cat-excess treaty requested"
+  },
+  {
+    "id": 13,
+    "cedent": "Redwood Mutual",
+    "peril": "Wildfire",
+    "line_of_business": "Quota Share",
+    "region": "California",
+    "exposure": 3600000,
+    "limit": 0.40,
+    "quota_share_cap": 0.50,
+    "notes": "Wildfire-focused property portfolio; seeking quota share"
+  },
+  {
+    "id": 14,
+    "cedent": "Alpine Re",
+    "peril": "Avalanche",
+    "line_of_business": "Property Cat XL",
+    "region": "Switzerland",
+    "exposure": 2000000,
+    "limit": 0.30,
+    "quota_share_cap": 0.40,
+    "notes": "Mountain resort exposure; winter avalanche protection"
+  },
+  {
+    "id": 15,
+    "cedent": "Desert Sun Insurance",
+    "peril": "Dust Storm",
+    "line_of_business": "Excess of Loss",
+    "region": "Middle East",
+    "exposure": 4000000,
+    "limit": 0.25,
+    "quota_share_cap": 0.35,
+    "notes": "Specialty coverage for desert regions and dust storms"
+  }
+]
