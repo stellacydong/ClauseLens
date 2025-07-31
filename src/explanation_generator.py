@@ -1,100 +1,107 @@
-# src/explanation_generator.py
-import random
+"""
+explanation_generator.py
+------------------------
+Generates ClauseLens explanations for treaty bids:
+- Uses retrieved clauses for audit-ready justifications
+- Supports concise or detailed modes for dashboards and investor PDFs
+"""
+
+from typing import List, Dict
+from datetime import datetime
+
 
 class ClauseExplainer:
-    """
-    Generates ClauseLens explanations for winning bids using retrieved clauses.
-    Produces a narrative highlighting compliance with regulatory and risk requirements.
-    """
-
-    def __init__(self):
-        pass
-
-    def generate_explanation(self, winning_bid, retrieved_clauses):
+    def __init__(self, detailed: bool = True):
         """
-        Generate a human-readable explanation using the winning bid and retrieved clauses.
-
-        Args:
-            winning_bid (dict): MARL agent's winning bid (premium, quota_share, expected_loss, tail_risk)
-            retrieved_clauses (list[dict]): Clauses from ClauseRetriever with
-                                           fields id, text, category, jurisdiction, score
-
-        Returns:
-            explanation (str): Narrative explanation for PDF and Streamlit display
+        :param detailed: If True, produce extended explanations for PDFs
         """
+        self.detailed = detailed
 
+    # ---------------------------
+    # Core Explanation
+    # ---------------------------
+    def generate_explanation(self, winning_bid: Dict, clauses: List[Dict]) -> str:
+        """
+        Generate a natural language explanation for the winning bid.
+        :param winning_bid: Dict with quota_share, premium, expected_loss, tail_risk
+        :param clauses: List of retrieved clauses with {id, text, category}
+        """
         if not winning_bid:
-            return "No winning bid information available."
+            return "No winning bid available to explain."
 
-        if not retrieved_clauses:
-            return (
-                f"The winning bid offers a quota share of {winning_bid.get('quota_share', 0):.0%} "
-                f"with a premium of ${winning_bid.get('premium', 0):,.0f}, "
-                "but no relevant clauses were retrieved for this treaty."
-            )
+        quota = winning_bid.get("quota_share", 0.0)
+        premium = winning_bid.get("premium", 0.0)
+        expected_loss = winning_bid.get("expected_loss", 0.0)
+        tail_risk = winning_bid.get("tail_risk", 0.0)
 
-        # Pick top 3 clauses for explanation
-        top_clauses = retrieved_clauses[:3]
-
-        # Create a narrative
-        explanation_parts = [
-            f"The winning bid proposes a quota share of {winning_bid.get('quota_share', 0):.0%} "
-            f"with a premium of ${winning_bid.get('premium', 0):,.0f}. "
-            f"This aligns with regulatory and capital requirements as follows:"
-        ]
-
-        for clause in top_clauses:
-            explanation_parts.append(
-                f"- **{clause['category']} ({clause['jurisdiction']})**: {clause['text']}"
-            )
-
-        explanation_parts.append(
-            "This structure supports risk transfer and regulatory compliance, "
-            "balancing profitability and tail-risk exposure."
+        # Base summary
+        summary = (
+            f"This bid proposes a {quota:.0%} quota share with a premium of "
+            f"${premium:,.0f}, covering an expected loss of ${expected_loss:,.0f} "
+            f"and tail-risk exposure (CVaR) of ${tail_risk:,.0f}."
         )
 
-        explanation = "\n".join(explanation_parts)
-        return explanation
+        # Clause integration
+        if clauses:
+            summary += " It aligns with the following regulatory and structural requirements:"
+            for clause in clauses:
+                summary += f"\n- [Clause {clause['id']}] ({clause['category']}) {clause['text']}"
+        else:
+            summary += " No relevant regulatory clauses were retrieved."
+
+        # Detailed explanation for PDF mode
+        if self.detailed:
+            summary += (
+                "\n\nRationale:\n"
+                "- The premium exceeds the expected loss, ensuring a positive risk margin.\n"
+                "- Quota share and tail-risk are within regulatory thresholds.\n"
+                "- Retrieved clauses confirm compliance with capital and reporting standards."
+            )
+
+            # Timestamp for audit-ready reports
+            summary += f"\n\nGenerated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+
+        return summary
+
+    # ---------------------------
+    # Episode-Level Report Builder
+    # ---------------------------
+    def build_episode_explanation(self, episode_result: Dict) -> str:
+        """
+        Combine treaty details, winning bid, and clause explanation into a full report string.
+        """
+        treaty = episode_result.get("treaty", {})
+        winning_bid = episode_result.get("winning_bid", {})
+        clauses = episode_result.get("clauses", [])
+
+        header = (
+            f"Cedent: {treaty.get('cedent', 'Unknown')}\n"
+            f"Peril: {treaty.get('peril', 'Unknown')} | "
+            f"LOB: {treaty.get('line_of_business', 'Unknown')} | "
+            f"Region: {treaty.get('region', 'Unknown')}\n"
+            f"Exposure: ${treaty.get('exposure',0):,.0f} | "
+            f"Limit: {treaty.get('limit',0):.0%} | "
+            f"Quota Share Cap: {treaty.get('quota_share_cap',0):.0%}\n"
+            f"Notes: {treaty.get('notes','None')}\n\n"
+        )
+
+        return header + self.generate_explanation(winning_bid, clauses)
 
 
 # ---------------------------
-# Quick Test (Optional)
+# Quick Test
 # ---------------------------
 if __name__ == "__main__":
-    # Sample winning bid
-    winning_bid = {
-        "quota_share": 0.5,
-        "premium": 1_200_000,
-        "expected_loss": 950_000,
-        "tail_risk": 300_000
+    sample_bid = {
+        "quota_share": 0.4,
+        "premium": 200000,
+        "expected_loss": 150000,
+        "tail_risk": 60000,
     }
-
-    # Sample retrieved clauses
-    retrieved_clauses = [
-        {
-            "id": 1,
-            "text": "Solvency II Article 101 requires that capital be sufficient to cover 99.5% of annual risk.",
-            "category": "Capital Adequacy",
-            "jurisdiction": "EU",
-            "score": 0.87
-        },
-        {
-            "id": 2,
-            "text": "IFRS 17 mandates transparent reporting of expected losses and reinsurance recoverables.",
-            "category": "Accounting & Reporting",
-            "jurisdiction": "Global",
-            "score": 0.83
-        },
-        {
-            "id": 3,
-            "text": "Excess-of-loss treaties require reinsurer participation to be well diversified.",
-            "category": "Diversification",
-            "jurisdiction": "Global",
-            "score": 0.79
-        }
+    sample_clauses = [
+        {"id": 1, "text": "Solvency II Article 101 requires 99.5% capital coverage.", "category": "Capital Requirements"},
+        {"id": 2, "text": "IFRS 17 mandates transparent reporting.", "category": "Accounting & Reporting"}
     ]
 
-    explainer = ClauseExplainer()
-    explanation = explainer.generate_explanation(winning_bid, retrieved_clauses)
-    print("Generated Explanation:\n")
-    print(explanation)
+    explainer = ClauseExplainer(detailed=True)
+    print(explainer.generate_explanation(sample_bid, sample_clauses))

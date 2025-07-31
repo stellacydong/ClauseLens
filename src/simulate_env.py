@@ -1,62 +1,88 @@
-import numpy as np
+"""
+simulate_env.py
+---------------
+Simulated treaty environment for ClauseLens MARL agents:
+- Handles environment reset and bid evaluation
+- Returns treaty info for demo and training
+"""
+
 import random
+import numpy as np
+from typing import List, Dict, Tuple
+from src.data_loader import DataLoader
+
 
 class TreatyEnv:
-    def __init__(self, num_agents=3, seed=None):
-        """
-        Multi-agent reinsurance treaty bidding environment.
-
-        Args:
-            num_agents (int): Number of bidding agents.
-            seed (int, optional): Random seed for reproducibility.
-        """
+    """
+    Multi-agent treaty simulation environment.
+    """
+    def __init__(self, num_agents: int = 3):
         self.num_agents = num_agents
-        self.current_treaty = None
+        self.loader = DataLoader()
+        self.current_treaty: Dict = None
 
-        if seed is not None:
-            np.random.seed(seed)
-            random.seed(seed)
-
-    def reset(self, treaty_override=None):
+    # ---------------------------
+    # Reset Environment
+    # ---------------------------
+    def reset(self, treaty_override: Dict = None) -> Dict:
         """
         Reset environment for a new episode.
-        Returns the current treaty for agents to bid on.
+        :param treaty_override: Optional treaty dict to use
+        :return: Selected treaty dict
         """
-        if treaty_override is not None:
-            self.current_treaty = treaty_override
-        else:
-            # Generate a simple random treaty if none is provided
-            self.current_treaty = {
-                "peril": random.choice(["Hurricane", "Flood", "Wildfire", "Earthquake", "Winter Storm"]),
-                "region": random.choice(["Florida", "California", "US Midwest", "Canada"]),
-                "exposure": int(np.random.uniform(3_000_000, 8_000_000)),
-                "limit": round(np.random.uniform(0.3, 0.6), 2),
-                "quota_share_cap": round(np.random.uniform(0.4, 0.6), 2),
-                "notes": "Synthetic treaty generated for demo episode"
-            }
-
+        treaties = self.loader.load_treaties()
+        self.current_treaty = treaty_override or random.choice(treaties)
         return self.current_treaty
 
-    def step(self, bids):
+    # ---------------------------
+    # Step: Evaluate Bids
+    # ---------------------------
+    def step(self, bids: List[Dict]) -> Tuple[int, float]:
         """
-        Decide the winning bid based on highest profit.
-
-        Args:
-            bids (list of dict): Each bid dict requires:
-                - 'premium'
-                - 'expected_loss'
-                - 'tail_risk'
-
-        Returns:
-            winner_idx (int): Index of winning agent
-            reward (float): Profit of winning bid
+        Evaluate bids and return winning agent index and reward.
+        Reward is simplified as (premium - expected_loss).
         """
-        if not bids or len(bids) != self.num_agents:
-            raise ValueError(f"Expected {self.num_agents} bids, got {len(bids) if bids else 0}")
+        if not bids:
+            return 0, 0.0
 
-        # Compute profits
         profits = [b["premium"] - b["expected_loss"] for b in bids]
         winner_idx = int(np.argmax(profits))
         reward = profits[winner_idx]
-
         return winner_idx, reward
+
+    # ---------------------------
+    # Simulate One Episode
+    # ---------------------------
+    def simulate_episode(self, agents) -> Dict:
+        """
+        Simulate a full episode: reset → agents bid → evaluate → return results.
+        """
+        treaty = self.reset()
+        bids = [agent.get_bid(treaty) for agent in agents]
+        winner_idx, reward = self.step(bids)
+
+        return {
+            "treaty": treaty,
+            "bids": bids,
+            "winner_idx": winner_idx,
+            "winning_bid": bids[winner_idx],
+            "reward": reward,
+        }
+
+
+# ---------------------------
+# Quick Test
+# ---------------------------
+if __name__ == "__main__":
+    from src.marl_agents import create_agents
+
+    env = TreatyEnv(num_agents=3)
+    agents = create_agents(3, mode="demo")
+
+    print("🚀 Simulating 3 episodes...")
+    for ep in range(3):
+        result = env.simulate_episode(agents)
+        print(
+            f"Episode {ep+1}: Winner={result['winner_idx']}, "
+            f"Profit={result['winning_bid']['premium']-result['winning_bid']['expected_loss']:,.0f}"
+        )

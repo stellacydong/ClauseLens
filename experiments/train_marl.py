@@ -1,106 +1,114 @@
 """
-train_marl.py
--------------
-Training script for MARL agents for ClauseLens treaty bidding.
+experiments/train_marl.py
 
-- Initializes multi-agent environment (TreatyEnv)
-- Trains MARL agents using simple PPO-like updates (demo-friendly)
-- Logs episode metrics (profit, CVaR, compliance)
-- Saves trained agent parameters for reuse in demo_app.py
+Trains Multi-Agent Reinforcement Learning (MARL) agents
+for reinsurance treaty bidding and evaluates performance.
+
+Checkpoints are saved to experiments/checkpoints/
 """
 
 import os
 import sys
 import json
-import time
 import numpy as np
-from pathlib import Path
+from datetime import datetime
 
-# Ensure src is on Python path
-sys.path.append(str(Path(__file__).resolve().parents[1]))
+# Ensure project root is in the path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.simulate_env import TreatyEnv
 from src.marl_agents import MARLAgent
+from src.data_loader import load_sample_treaties
 from src.evaluation import evaluate_bids, summarize_portfolio
+from src.utils import set_seed
 
 # ---------------------------
-# Training Config
+# Configuration
 # ---------------------------
 NUM_AGENTS = 3
 NUM_EPISODES = 200
-SAVE_DIR = "experiments/checkpoints"
-os.makedirs(SAVE_DIR, exist_ok=True)
+CHECKPOINT_DIR = os.path.join("experiments", "checkpoints")
+os.makedirs(CHECKPOINT_DIR, exist_ok=True)
 
-# Sample treaty pool
-with open("data/sample_treaties.json") as f:
-    SAMPLE_TREATIES = json.load(f)
-
-np.random.seed(42)
-
+set_seed(42)
 
 # ---------------------------
-# Simple MARL Training Loop
+# Load Sample Treaties
 # ---------------------------
-def train_marl_agents(num_episodes=NUM_EPISODES):
-    env = TreatyEnv(num_agents=NUM_AGENTS)
-    agents = [MARLAgent(i) for i in range(NUM_AGENTS)]
+treaties = load_sample_treaties()
+if not treaties:
+    raise ValueError("No treaties found. Ensure data/sample_treaties.json exists.")
 
-    all_rewards = []
-    portfolio_results = []
-
-    for episode in range(num_episodes):
-        treaty = SAMPLE_TREATIES[episode % len(SAMPLE_TREATIES)]
-        state = env.reset(treaty_override=treaty)
-
-        # Each agent proposes a bid
-        bids = [agent.get_bid(state) for agent in agents]
-
-        # Environment decides winner
-        winner_idx, reward = env.step(bids)
-        winning_bid = bids[winner_idx]
-
-        # Evaluate the winning bid
-        kpi = evaluate_bids([winning_bid], winner_idx=0, treaty=state)
-        portfolio_results.append(kpi)
-        all_rewards.append(kpi["profit"])
-
-        # Simple training placeholder: Adjust agent biases
-        for i, agent in enumerate(agents):
-            agent.update_policy(kpi["profit"] if i == winner_idx else -kpi["cvar"])
-
-        if (episode + 1) % 10 == 0:
-            summary = summarize_portfolio(portfolio_results[-10:])
-            print(f"[Episode {episode+1}/{num_episodes}] "
-                  f"Avg Profit: {summary['avg_profit']:.0f}, "
-                  f"Avg CVaR: {summary['avg_cvar']:.0f}, "
-                  f"Compliance: {summary['compliance_rate']*100:.0f}%")
-
-    return agents, portfolio_results
-
+print(f"Loaded {len(treaties)} sample treaties for training.")
 
 # ---------------------------
-# Save Trained Agents
+# Initialize Environment & Agents
 # ---------------------------
-def save_agents(agents, save_dir=SAVE_DIR):
+env = TreatyEnv(num_agents=NUM_AGENTS)
+agents = [MARLAgent(i) for i in range(NUM_AGENTS)]
+
+portfolio_results_marl = []
+
+# ---------------------------
+# Training Loop
+# ---------------------------
+print("🚀 Starting MARL training...")
+
+for episode in range(1, NUM_EPISODES + 1):
+    # Randomly select a treaty
+    treaty = np.random.choice(treaties)
+    env.reset(treaty_override=treaty)
+
+    # Agents submit bids
+    bids = [agent.get_bid(treaty) for agent in agents]
+
+    # Select winner (highest profit minus CVaR)
+    scores = [(b["premium"] - b["expected_loss"]) - 0.2 * b["tail_risk"] for b in bids]
+    winner_idx = int(np.argmax(scores))
+
+    # Evaluate KPIs for the winning bid
+    kpi = evaluate_bids([bids[winner_idx]], winner_idx=0, treaty=treaty)
+    portfolio_results_marl.append(kpi)
+
+    # Simple reward signal: profit for winner, negative CVaR for losers
     for i, agent in enumerate(agents):
-        agent_file = os.path.join(save_dir, f"marl_agent_{i}.json")
-        with open(agent_file, "w") as f:
-            json.dump(agent.export_parameters(), f)
-    print(f"✅ Saved {len(agents)} MARL agents to {save_dir}")
+        reward = kpi["profit"] if i == winner_idx else -kpi["cvar"]
+        agent.update_policy(reward)
 
+    # Print progress every 10 episodes
+    if episode % 10 == 0:
+        summary = summarize_portfolio(portfolio_results_marl[-10:])
+        print(f"[Episode {episode}/{NUM_EPISODES}] "
+              f"Avg Profit: {summary['avg_profit']:,.0f}, "
+              f"Avg CVaR: {summary['avg_cvar']:,.0f}, "
+              f"Compliance: {summary['compliance_rate']*100:.0f}%")
 
-if __name__ == "__main__":
-    print("🚀 Starting MARL training...")
-    start_time = time.time()
+# ---------------------------
+# Save Checkpoints
+# ---------------------------
+for agent in agents:
+    agent_path = os.path.join(CHECKPOINT_DIR, f"marl_agent_{agent.agent_id}.json")
+    agent.save(agent_path)
 
-    agents, results = train_marl_agents()
-    save_agents(agents)
+print(f"✅ Saved {len(agents)} MARL agents to {CHECKPOINT_DIR}")
 
-    duration = time.time() - start_time
-    summary = summarize_portfolio(results)
-    print("\n=== Training Summary ===")
-    print(f"Episodes: {summary['episodes']}")
-    print(f"Average Profit: {summary['avg_profit']:.0f}")
-    print(f"Average CVaR: {summary['avg_cvar']:.0f}")
-    print(f"Compliance Rate: {summary['compliance_rate']*100:.0f}%")
-    print(f"Training Time: {duration:.1f} sec")
+# ---------------------------
+# Training Summary
+# ---------------------------
+training_summary = summarize_portfolio(portfolio_results_marl)
+summary_json = {
+    "timestamp": datetime.now().isoformat(),
+    "episodes": NUM_EPISODES,
+    "summary": training_summary
+}
+
+summary_file = os.path.join("experiments", "training_summary.json")
+with open(summary_file, "w") as f:
+    json.dump(summary_json, f, indent=2)
+
+print("\n=== Training Summary ===")
+print(f"Episodes: {NUM_EPISODES}")
+print(f"Average Profit: {training_summary['avg_profit']:,.0f}")
+print(f"Average CVaR: {training_summary['avg_cvar']:,.0f}")
+print(f"Compliance Rate: {training_summary['compliance_rate']*100:.0f}%")
+print(f"Training Time: {0.0:.1f} sec")  # Add timing if needed

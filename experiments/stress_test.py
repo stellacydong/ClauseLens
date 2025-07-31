@@ -1,141 +1,135 @@
 """
-stress_test.py
---------------
-Performs catastrophe + capital stress tests for ClauseLens MARL agents.
+experiments/stress_test.py
 
-- Loads trained MARL agents (fallback to random if none)
-- Applies stress scenarios: high-cat frequency, capital reduction, extreme tail risk
-- Evaluates Profit, CVaR, and Compliance KPIs for each scenario
-- Outputs a summary table and saves detailed results to JSON
+Runs catastrophe + capital stress tests for MARL and baseline reinsurance strategies.
+Outputs results to stress_test_results.json for investor dashboards and analysis.
 """
 
 import os
-import sys
 import json
 import numpy as np
-from pathlib import Path
+from datetime import datetime
 
-# Ensure src is in Python path
-sys.path.append(str(Path(__file__).resolve().parents[1]))
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.simulate_env import TreatyEnv
-from src.marl_agents import MARLAgent
+from src.data_loader import load_sample_treaties
 from src.evaluation import evaluate_bids, summarize_portfolio
+from src.marl_agents import MARLAgent
+from src.simulate_env import TreatyEnv
+from src.utils import set_seed
 
 # ---------------------------
-# Config
+# Configuration
 # ---------------------------
 NUM_AGENTS = 3
+STRESS_SCENARIOS_FILE = os.path.join("data", "stress_scenarios.json")
+OUTPUT_FILE = os.path.join("experiments", "stress_test_results.json")
 NUM_EPISODES = 50
-CHECKPOINT_DIR = "experiments/checkpoints"
-DATA_DIR = "data"
 
-np.random.seed(42)
-
-with open(os.path.join(DATA_DIR, "sample_treaties.json")) as f:
-    SAMPLE_TREATIES = json.load(f)
-
+set_seed(42)
 
 # ---------------------------
-# Load Trained Agents
+# Load Data
 # ---------------------------
-def load_trained_agents(checkpoint_dir=CHECKPOINT_DIR, num_agents=NUM_AGENTS):
-    agents = []
-    for i in range(num_agents):
-        agent = MARLAgent(i)
-        ckpt_file = os.path.join(checkpoint_dir, f"marl_agent_{i}.json")
-        if os.path.exists(ckpt_file):
-            with open(ckpt_file) as f:
-                params = json.load(f)
-            agent.load_parameters(params)
-        agents.append(agent)
-    return agents
+treaties = load_sample_treaties()
 
+if os.path.exists(STRESS_SCENARIOS_FILE):
+    with open(STRESS_SCENARIOS_FILE, "r") as f:
+        stress_scenarios = json.load(f)
+else:
+    raise FileNotFoundError(f"Stress scenario file not found: {STRESS_SCENARIOS_FILE}")
+
+print(f"Loaded {len(treaties)} sample treaties and {len(stress_scenarios)} stress scenarios.")
 
 # ---------------------------
-# Stress Scenarios
+# Helper Functions
 # ---------------------------
-STRESS_SCENARIOS = [
-    {
-        "name": "High-Cat Frequency",
-        "loss_multiplier": 1.5,     # 50% more losses
-        "tail_risk_multiplier": 1.3,
-        "capital_shock": 1.0,
-    },
-    {
-        "name": "Capital Reduction 20%",
-        "loss_multiplier": 1.0,
-        "tail_risk_multiplier": 1.0,
-        "capital_shock": 0.8,      # 20% less available capital
-    },
-    {
-        "name": "Severe Tail Scenario",
-        "loss_multiplier": 1.2,
-        "tail_risk_multiplier": 2.0, # Double tail risk stress
-        "capital_shock": 0.9,
-    },
-]
+def baseline_bid(treaty):
+    """Simple actuarial baseline: expected loss * 1.2 premium."""
+    exp_loss = np.random.uniform(100_000, 200_000)
+    return {
+        "agent_id": "Baseline",
+        "quota_share": min(0.3, treaty.get("quota_share_cap", 0.3)),
+        "premium": exp_loss * 1.2,
+        "expected_loss": exp_loss,
+        "tail_risk": exp_loss * 0.3,
+    }
 
+def apply_stress(treaty, scenario):
+    """Adjust treaty exposure and expected loss according to stress severity."""
+    stressed_treaty = dict(treaty)
+    severity = scenario.get("severity", 1.0)
+    
+    # Example: scale exposure and add stress flag
+    stressed_treaty["exposure"] *= severity
+    stressed_treaty["stress_scenario"] = scenario["name"]
+    
+    return stressed_treaty
 
 # ---------------------------
 # Stress Test Execution
 # ---------------------------
-def run_stress_test(num_episodes=NUM_EPISODES):
-    agents = load_trained_agents()
-    env = TreatyEnv(num_agents=NUM_AGENTS)
-    results_by_scenario = {}
+env = TreatyEnv(num_agents=NUM_AGENTS)
+agents = [MARLAgent(i) for i in range(NUM_AGENTS)]
 
-    for scenario in STRESS_SCENARIOS:
-        print(f"\n=== Running Stress Test: {scenario['name']} ===")
-        scenario_results = []
+results = []
+portfolio_results_marl = []
+portfolio_results_baseline = []
 
-        for ep in range(num_episodes):
-            treaty = SAMPLE_TREATIES[ep % len(SAMPLE_TREATIES)]
-            state = env.reset(treaty_override=treaty)
+print("🚀 Running stress tests...")
 
-            # MARL Bids
-            bids = []
-            for agent in agents:
-                bid = agent.get_bid(state)
-                # Apply stress multipliers
-                bid["expected_loss"] *= scenario["loss_multiplier"]
-                bid["tail_risk"] *= scenario["tail_risk_multiplier"]
-                bids.append(bid)
-
-            # Determine winner and apply capital shock
-            winner_idx, _ = env.step(bids)
-            winning_bid = bids[winner_idx]
-
-            # Adjust KPIs for capital shock (affects compliance)
-            kpi = evaluate_bids([winning_bid], winner_idx=0, treaty=state)
-            if scenario["capital_shock"] < 1.0:
-                # Simulate stricter compliance under lower capital
-                kpi["regulatory_flags"]["all_ok"] = (
-                    kpi["regulatory_flags"]["all_ok"] and
-                    np.random.rand() < scenario["capital_shock"]
-                )
-
-            scenario_results.append(kpi)
-
-        summary = summarize_portfolio(scenario_results)
-        results_by_scenario[scenario["name"]] = summary
-
-        print(f"Scenario: {scenario['name']}")
-        print(f"  Avg Profit: ${summary['avg_profit']:,.0f}")
-        print(f"  Avg CVaR:   ${summary['avg_cvar']:,.0f}")
-        print(f"  Compliance: {summary['compliance_rate']*100:.0f}%")
-
-    return results_by_scenario
-
+for episode in range(NUM_EPISODES):
+    treaty = np.random.choice(treaties)
+    scenario = np.random.choice(stress_scenarios)
+    
+    # Apply stress
+    stressed_treaty = apply_stress(treaty, scenario)
+    env.reset(treaty_override=stressed_treaty)
+    
+    # Generate bids
+    marl_bids = [agent.get_bid(stressed_treaty) for agent in agents]
+    winner_idx = np.random.randint(len(agents))  # placeholder selection
+    marl_kpi = evaluate_bids([marl_bids[winner_idx]], winner_idx=0, treaty=stressed_treaty)
+    
+    baseline = baseline_bid(stressed_treaty)
+    baseline_kpi = evaluate_bids([baseline], winner_idx=0, treaty=stressed_treaty)
+    
+    # Store results
+    results.append({
+        "episode": episode + 1,
+        "treaty_id": stressed_treaty["id"],
+        "stress_scenario": scenario["name"],
+        "marl_profit": marl_kpi["profit"],
+        "marl_cvar": marl_kpi["cvar"],
+        "marl_compliance": marl_kpi["regulatory_flags"]["all_ok"],
+        "baseline_profit": baseline_kpi["profit"],
+        "baseline_cvar": baseline_kpi["cvar"],
+        "baseline_compliance": baseline_kpi["regulatory_flags"]["all_ok"]
+    })
+    
+    portfolio_results_marl.append(marl_kpi)
+    portfolio_results_baseline.append(baseline_kpi)
 
 # ---------------------------
-# Run and Save Results
+# Summary
 # ---------------------------
-if __name__ == "__main__":
-    print("🚀 Starting MARL Stress Tests...")
-    results = run_stress_test()
+summary_marl = summarize_portfolio(portfolio_results_marl)
+summary_baseline = summarize_portfolio(portfolio_results_baseline)
 
-    output_file = "experiments/stress_test_results.json"
-    with open(output_file, "w") as f:
-        json.dump(results, f, indent=2)
-    print(f"\n✅ Stress test results saved to {output_file}")
+summary = {
+    "timestamp": datetime.now().isoformat(),
+    "num_episodes": NUM_EPISODES,
+    "marl_summary": summary_marl,
+    "baseline_summary": summary_baseline,
+    "results": results
+}
+
+# ---------------------------
+# Save Results
+# ---------------------------
+os.makedirs("experiments", exist_ok=True)
+with open(OUTPUT_FILE, "w") as f:
+    json.dump(summary, f, indent=2)
+
+print(f"✅ Stress test complete. Results saved to {OUTPUT_FILE}")

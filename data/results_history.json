@@ -1,0 +1,162 @@
+[
+  {
+    "run_id": "2025-07-30_001",
+    "timestamp": "2025-07-30T21:45:12",
+    "num_episodes": 3,
+    "scenario": "Random",
+    "summary": {
+      "avg_marl_profit": 128500,
+      "avg_marl_cvar": 415200,
+      "marl_compliance_rate": 1.0,
+      "avg_baseline_profit": 352000,
+      "avg_baseline_cvar": 982000,
+      "baseline_compliance_rate": 1.0
+    },
+    "episodes": [
+      {
+        "episode": 1,
+        "treaty": {
+          "cedent": "ABC Insurance",
+          "peril": "Hurricane",
+          "region": "Florida",
+          "line_of_business": "Property Cat XL",
+          "exposure": 7500000,
+          "limit": 0.4,
+          "quota_share_cap": 0.6
+        },
+        "winning_bid": {
+          "agent_id": 2,
+          "quota_share": 0.28,
+          "premium": 105000,
+          "expected_loss": 82000,
+          "tail_risk": 25000
+        },
+        "marl_kpi": {
+          "profit": 23000,
+          "cvar": 25000,
+          "regulatory_flags": {
+            "all_ok": true,
+            "quota_share_ok": true,
+            "premium_ok": true,
+            "tail_risk_ok": true
+          }
+        },
+        "baseline_kpi": {
+          "profit": 45000,
+          "cvar": 130000,
+          "regulatory_flags": {
+            "all_ok": true
+          }
+        },
+        "retrieved_clauses": [
+          {
+            "id": 1,
+            "text": "Solvency II Article 101 requires that capital be sufficient to cover 99.5% of annual risk.",
+            "category": "Capital Adequacy",
+            "jurisdiction": "EU"
+          },
+          {
+            "id": 4,
+            "text": "Treaty coverage must align with the insurer’s capital buffer and retention strategy.",
+            "category": "Underwriting & Retention",
+            "jurisdiction": "Global"
+          }
+        ]
+      },
+      {
+        "episode": 2,
+        "treaty": {
+          "cedent": "XYZ Mutual",
+          "peril": "Earthquake",
+          "region": "California",
+          "line_of_business": "Property Quota Share",
+          "exposure": 5000000,
+          "limit": 0.35,
+          "quota_share_cap": 0.5
+        },
+        "winning_bid": {
+          "agent_id": 1,
+          "quota_share": 0.32,
+          "premium": 95000,
+          "expected_loss": 74000,
+          "tail_risk": 22000
+        },
+        "marl_kpi": {
+          "profit": 21000,
+          "cvar": 22000,
+          "regulatory_flags": {
+            "all_ok": true
+          }
+        },
+        "baseline_kpi": {
+          "profit": 36000,
+          "cvar": 120000,
+          "regulatory_flags": {
+            "all_ok": true
+          }
+        },
+        "retrieved_clauses": [
+          {
+            "id": 3,
+            "text": "IFRS 17 mandates transparent reporting of expected losses and reinsurance recoverables.",
+            "category": "Accounting & Reporting",
+            "jurisdiction": "Global"
+          },
+          {
+            "id": 2,
+            "text": "NAIC Risk-Based Capital (RBC) guidelines require tail-risk stress testing for catastrophe treaties.",
+            "category": "Risk-Based Capital",
+            "jurisdiction": "US"
+          }
+        ]
+      },
+      {
+        "episode": 3,
+        "treaty": {
+          "cedent": "Global P&C",
+          "peril": "Flood",
+          "region": "US Midwest",
+          "line_of_business": "Aggregate Stop Loss",
+          "exposure": 6200000,
+          "limit": 0.45,
+          "quota_share_cap": 0.55
+        },
+        "winning_bid": {
+          "agent_id": 3,
+          "quota_share": 0.3,
+          "premium": 115000,
+          "expected_loss": 87000,
+          "tail_risk": 28000
+        },
+        "marl_kpi": {
+          "profit": 28000,
+          "cvar": 28000,
+          "regulatory_flags": {
+            "all_ok": true
+          }
+        },
+        "baseline_kpi": {
+          "profit": 41000,
+          "cvar": 135000,
+          "regulatory_flags": {
+            "all_ok": true
+          }
+        },
+        "retrieved_clauses": [
+          {
+            "id": 5,
+            "text": "Excess-of-loss treaties require reinsurer participation to be well diversified.",
+            "category": "Diversification",
+            "jurisdiction": "Global"
+          },
+          {
+            "id": 6,
+            "text": "Catastrophe treaty exposures must pass 1-in-200 year Probable Maximum Loss (PML) stress tests.",
+            "category": "Catastrophe Risk",
+            "jurisdiction": "Global"
+          }
+        ]
+      }
+    ]
+  }
+]

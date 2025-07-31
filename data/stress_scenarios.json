@@ -1,0 +1,152 @@
+[
+  {
+    "id": 1,
+    "name": "Hurricane Category 5 – Florida Landfall",
+    "type": "Catastrophe",
+    "peril": "Hurricane",
+    "region": "Florida",
+    "probability": 0.005,
+    "severity_factor": 1.0,
+    "description": "Simulates a direct Cat 5 hurricane landfall in Miami affecting high-value coastal portfolios.",
+    "impacts": {
+      "loss_ratio_increase": 0.75,
+      "tail_risk_multiplier": 2.0,
+      "capital_buffer_reduction": 0.3
+    }
+  },
+  {
+    "id": 2,
+    "name": "California Earthquake M7.8",
+    "type": "Catastrophe",
+    "peril": "Earthquake",
+    "region": "California",
+    "probability": 0.004,
+    "severity_factor": 0.9,
+    "description": "San Andreas rupture impacting both Northern and Southern California metropolitan areas.",
+    "impacts": {
+      "loss_ratio_increase": 0.65,
+      "tail_risk_multiplier": 1.8,
+      "capital_buffer_reduction": 0.25
+    }
+  },
+  {
+    "id": 3,
+    "name": "European Windstorm – Multi-Country Impact",
+    "type": "Catastrophe",
+    "peril": "Windstorm",
+    "region": "Western Europe",
+    "probability": 0.02,
+    "severity_factor": 0.7,
+    "description": "Windstorm sweeping across UK, France, and Germany causing widespread property damage.",
+    "impacts": {
+      "loss_ratio_increase": 0.5,
+      "tail_risk_multiplier": 1.6,
+      "capital_buffer_reduction": 0.2
+    }
+  },
+  {
+    "id": 4,
+    "name": "Global Multi-Line Cat Season",
+    "type": "Multi-Line",
+    "peril": "Hurricane+Flood+Wildfire",
+    "region": "Global",
+    "probability": 0.01,
+    "severity_factor": 1.2,
+    "description": "Simultaneous hurricane, major river flood, and wildfire season; compound portfolio stress.",
+    "impacts": {
+      "loss_ratio_increase": 0.9,
+      "tail_risk_multiplier": 2.5,
+      "capital_buffer_reduction": 0.35
+    }
+  },
+  {
+    "id": 5,
+    "name": "Global Reinsurance Pricing Shock",
+    "type": "Macro",
+    "peril": "Market Shock",
+    "region": "Global",
+    "probability": 0.05,
+    "severity_factor": 0.5,
+    "description": "Market repricing due to retrocession shortage and reinsurer withdrawals.",
+    "impacts": {
+      "loss_ratio_increase": 0.2,
+      "tail_risk_multiplier": 1.3,
+      "capital_buffer_reduction": 0.15
+    }
+  },
+  {
+    "id": 6,
+    "name": "US Wildfire Cluster Event",
+    "type": "Catastrophe",
+    "peril": "Wildfire",
+    "region": "California",
+    "probability": 0.03,
+    "severity_factor": 0.6,
+    "description": "Simultaneous ignition of 3+ major wildfires across Northern and Southern California.",
+    "impacts": {
+      "loss_ratio_increase": 0.55,
+      "tail_risk_multiplier": 1.7,
+      "capital_buffer_reduction": 0.18
+    }
+  },
+  {
+    "id": 7,
+    "name": "Flood 1-in-200 Year Event – Mississippi Basin",
+    "type": "Catastrophe",
+    "peril": "Flood",
+    "region": "US Midwest",
+    "probability": 0.005,
+    "severity_factor": 1.0,
+    "description": "Record rainfall and river overflow impacting agricultural and urban exposures.",
+    "impacts": {
+      "loss_ratio_increase": 0.7,
+      "tail_risk_multiplier": 2.0,
+      "capital_buffer_reduction": 0.28
+    }
+  },
+  {
+    "id": 8,
+    "name": "Global Climate Change Trend Stress",
+    "type": "Emerging Risk",
+    "peril": "Climate Risk",
+    "region": "Global",
+    "probability": 0.2,
+    "severity_factor": 0.4,
+    "description": "Assumes 20% increase in climate-driven catastrophe frequency for all perils.",
+    "impacts": {
+      "loss_ratio_increase": 0.3,
+      "tail_risk_multiplier": 1.4,
+      "capital_buffer_reduction": 0.12
+    }
+  },
+  {
+    "id": 9,
+    "name": "Reinsurer Default Cluster",
+    "type": "Counterparty Risk",
+    "peril": "Credit Risk",
+    "region": "Global",
+    "probability": 0.01,
+    "severity_factor": 0.8,
+    "description": "Multiple reinsurers fail to honor obligations, causing capital and liquidity strain.",
+    "impacts": {
+      "loss_ratio_increase": 0.15,
+      "tail_risk_multiplier": 1.5,
+      "capital_buffer_reduction": 0.3
+    }
+  },
+  {
+    "id": 10,
+    "name": "Pandemic-Linked Economic Shock",
+    "type": "Macro",
+    "peril": "Pandemic",
+    "region": "Global",
+    "probability": 0.03,
+    "severity_factor": 0.6,
+    "description": "Global pandemic leading to economic slowdown, reduced premiums, and high claims ratio.",
+    "impacts": {
+      "loss_ratio_increase": 0.4,
+      "tail_risk_multiplier": 1.2,
+      "capital_buffer_reduction": 0.2
+    }
+  }
+]

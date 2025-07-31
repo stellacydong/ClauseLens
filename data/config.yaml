@@ -1,0 +1,80 @@
+# =============================
+# ClauseLens Project Config
+# =============================
+
+project:
+  name: "ClauseLens"
+  description: "Multi-Agent Reinsurance Bidding + ClauseLens Regulatory Explainability"
+  version: "1.0.0"
+  environment: "development"
+
+# -----------------------------
+# Paths
+# -----------------------------
+paths:
+  data_dir: "data"
+  src_dir: "src"
+  app_dir: "app"
+  experiments_dir: "experiments"
+  reports_dir: "reports"
+  
+  clauses_corpus: "data/clauses_corpus.json"
+  sample_treaties: "data/sample_treaties.json"
+  sample_results: "data/sample_results"
+  
+  # Checkpoints
+  marl_checkpoints: "experiments/checkpoints"
+  logs_dir: "experiments/logs"
+  plots_dir: "experiments/plots"
+
+# -----------------------------
+# Simulation / Demo Settings
+# -----------------------------
+simulation:
+  num_agents: 3
+  default_episodes: 5
+  max_episodes: 20
+  random_seed: 42
+  animate_bidding: true
+  bidding_steps: 50
+  delay_per_step: 0.02   # seconds
+
+# -----------------------------
+# Clause Retrieval Settings
+# -----------------------------
+clause_retrieval:
+  top_k: 5
+  match_threshold: 0.65
+  use_category_filter: true
+  use_jurisdiction_filter: true
+
+# -----------------------------
+# PDF & Reporting
+# -----------------------------
+reporting:
+  include_full_clauses: true
+  include_episode_table: true
+  include_profit_vs_cvar_chart: true
+  pdf_output: "reports/ClauseLens_Demo_Report_Full.pdf"
+  font: "helvetica"
+  use_unicode: false     # FPDF Unicode font issues workaround
+
+# -----------------------------
+# Visualization
+# -----------------------------
+visualization:
+  plot_style: "default"
+  figsize: [8, 6]
+  dpi: 120
+
+# -----------------------------
+# Training & MARL Settings
+# -----------------------------
+training:
+  episodes: 200
+  learning_rate: 0.01
+  gamma: 0.95
+  exploration_decay: 0.995
+  save_every: 50
+  enable_logging: true
+

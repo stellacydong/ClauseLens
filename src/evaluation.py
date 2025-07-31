@@ -1,112 +1,144 @@
-# src/evaluation.py
+"""
+evaluation.py
+-------------
+Functions to evaluate treaty bids for ClauseLens:
+- Profit and CVaR (tail risk)
+- Regulatory compliance checks
+- Portfolio summary for dashboards and investor reporting
+"""
+
 import numpy as np
+from typing import List, Dict
 
-def evaluate_bids(bids, winner_idx, treaty, retrieved_clauses=None):
+
+# ---------------------------
+# Episode-Level Evaluation
+# ---------------------------
+def evaluate_bids(bids: List[Dict], winner_idx: int, treaty: Dict) -> Dict:
     """
-    Evaluate MARL or baseline bids for profit, CVaR, and regulatory compliance.
-    Optionally attach ClauseLens clause IDs for justification.
+    Evaluate a list of bids for a treaty and return KPIs for the winning bid.
 
-    Args:
-        bids (list[dict]): Bids, each with keys:
-            - 'premium', 'expected_loss', 'tail_risk', 'quota_share'
-        winner_idx (int): Index of the winning bid
-        treaty (dict): Selected treaty details
-        retrieved_clauses (list[dict], optional): ClauseLens clauses from ClauseRetriever
-
-    Returns:
-        dict: KPIs including profit, CVaR, compliance flags, and clause justification
+    :param bids: List of bid dicts [{quota_share, premium, expected_loss, tail_risk}]
+    :param winner_idx: Index of winning bid
+    :param treaty: The treaty dictionary
+    :return: KPI dict {profit, cvar, regulatory_flags}
     """
-    if not bids:
-        return {
-            "winner": None,
-            "profit": 0,
-            "cvar": 0,
-            "regulatory_flags": {"all_ok": False},
-            "clauses_used": []
-        }
-
     winning_bid = bids[winner_idx]
-    expected_loss = winning_bid.get("expected_loss", 0)
-    premium = winning_bid.get("premium", 0)
+
+    premium = winning_bid["premium"]
+    expected_loss = winning_bid["expected_loss"]
     tail_risk = winning_bid.get("tail_risk", expected_loss * 0.3)
-    quota_share = winning_bid.get("quota_share", 0.0)
+    quota_share = winning_bid.get("quota_share", 0.3)
 
-    # Compute basic KPIs
+    # Profit: premium minus expected loss
     profit = premium - expected_loss
-    cvar = expected_loss + tail_risk  # Simple CVaR proxy
 
-    # Compliance rules
-    compliance_flags = {
+    # CVaR: simulate tail risk exposure (simplified)
+    cvar = tail_risk
+
+    # Regulatory compliance checks
+    regulatory_flags = {
         "quota_share_ok": quota_share <= treaty.get("quota_share_cap", 1.0),
-        "premium_ok": premium >= expected_loss * 1.05,  # min 5% margin
-        "tail_risk_ok": cvar <= treaty.get("exposure", 0) * 0.5  # simple stress limit
+        "premium_ok": premium > expected_loss,
+        "tail_risk_ok": cvar <= treaty.get("exposure", 1e6) * 0.5,
     }
-    compliance_flags["all_ok"] = all(compliance_flags.values())
-
-    # Collect clause IDs if provided
-    clause_ids = [c["id"] for c in retrieved_clauses] if retrieved_clauses else []
+    regulatory_flags["all_ok"] = all(regulatory_flags.values())
 
     return {
-        "winner": winner_idx,
-        "winning_bid": winning_bid,
         "profit": profit,
         "cvar": cvar,
-        "regulatory_flags": compliance_flags,
-        "clauses_used": clause_ids
+        "regulatory_flags": regulatory_flags,
     }
 
 
-def summarize_portfolio(episode_results):
+# ---------------------------
+# Portfolio Summary
+# ---------------------------
+def summarize_portfolio(episode_results: List[Dict]) -> Dict:
     """
-    Summarize portfolio performance over multiple episodes.
+    Summarize portfolio KPIs across multiple episodes.
 
-    Args:
-        episode_results (list[dict]): Results from evaluate_bids()
-
-    Returns:
-        dict: Portfolio KPIs including averages and compliance rate
+    :param episode_results: List of KPI dicts (output of evaluate_bids)
+    :return: Dict with average profit, CVaR, compliance rate
     """
     if not episode_results:
-        return {"avg_profit": 0, "avg_cvar": 0, "compliance_rate": 0.0, "episodes": 0}
+        return {"avg_profit": 0, "avg_cvar": 0, "compliance_rate": 0, "episodes": 0}
 
     profits = [ep["profit"] for ep in episode_results]
     cvars = [ep["cvar"] for ep in episode_results]
-    compliance = [ep["regulatory_flags"]["all_ok"] for ep in episode_results]
+    compliance = [1 if ep["regulatory_flags"]["all_ok"] else 0 for ep in episode_results]
 
     return {
+        "episodes": len(episode_results),
         "avg_profit": float(np.mean(profits)),
         "avg_cvar": float(np.mean(cvars)),
         "compliance_rate": float(np.mean(compliance)),
-        "episodes": len(episode_results)
     }
 
 
 # ---------------------------
-# Quick Test (Optional)
+# Portfolio Stress Evaluation
+# ---------------------------
+def stress_test_portfolio(episode_results: List[Dict], stress_factor: float = 1.5) -> Dict:
+    """
+    Apply a simple stress factor to CVaR and evaluate impact on compliance.
+
+    :param episode_results: List of KPI dicts
+    :param stress_factor: Multiplier for tail risk
+    :return: Dict with stressed portfolio summary
+    """
+    if not episode_results:
+        return {"avg_profit": 0, "avg_cvar": 0, "compliance_rate": 0}
+
+    stressed_results = []
+    for ep in episode_results:
+        stressed_cvar = ep["cvar"] * stress_factor
+        flags = ep["regulatory_flags"].copy()
+        flags["tail_risk_ok"] = stressed_cvar <= ep["cvar"] * 1.5  # simulate stricter test
+        flags["all_ok"] = all(flags.values())
+        stressed_results.append({
+            "profit": ep["profit"],
+            "cvar": stressed_cvar,
+            "regulatory_flags": flags,
+        })
+
+    return summarize_portfolio(stressed_results)
+
+
+# ---------------------------
+# Episode Table Builder
+# ---------------------------
+def build_episode_table(marl_results: List[Dict], base_results: List[Dict]) -> List[Dict]:
+    """
+    Combine MARL and Baseline KPI results into a single table-friendly list.
+    """
+    table = []
+    for i, (marl, base) in enumerate(zip(marl_results, base_results)):
+        table.append({
+            "Episode": i + 1,
+            "MARL Profit ($)": f"{marl['profit']:,.0f}",
+            "MARL CVaR ($)": f"{marl['cvar']:,.0f}",
+            "MARL Compliance": "Pass" if marl['regulatory_flags']['all_ok'] else "Fail",
+            "Baseline Profit ($)": f"{base['profit']:,.0f}",
+            "Baseline CVaR ($)": f"{base['cvar']:,.0f}",
+            "Baseline Compliance": "Pass" if base['regulatory_flags']['all_ok'] else "Fail",
+        })
+    return table
+
+
+# ---------------------------
+# Quick Test
 # ---------------------------
 if __name__ == "__main__":
-    sample_treaty = {
-        "peril": "Hurricane",
-        "region": "Florida",
-        "line_of_business": "Property Catastrophe",
-        "exposure": 500_000_000,
-        "limit": 0.3,
-        "quota_share_cap": 0.6
+    dummy_treaty = {
+        "exposure": 5_000_000,
+        "quota_share_cap": 0.5,
     }
-
-    sample_bids = [
-        {"premium": 1_200_000, "expected_loss": 950_000, "tail_risk": 300_000, "quota_share": 0.55},
-        {"premium": 1_100_000, "expected_loss": 900_000, "tail_risk": 350_000, "quota_share": 0.45},
-        {"premium": 1_050_000, "expected_loss": 870_000, "tail_risk": 320_000, "quota_share": 0.50},
+    dummy_bids = [
+        {"quota_share": 0.3, "premium": 150000, "expected_loss": 100000, "tail_risk": 40000},
+        {"quota_share": 0.4, "premium": 200000, "expected_loss": 180000, "tail_risk": 60000},
     ]
-
-    sample_clauses = [
-        {"id": 1, "text": "Solvency II capital must cover 99.5% annual risk."},
-        {"id": 3, "text": "IFRS 17 mandates transparent expected loss reporting."}
-    ]
-
-    episode_kpi = evaluate_bids(sample_bids, winner_idx=0, treaty=sample_treaty, retrieved_clauses=sample_clauses)
-    print("Episode KPIs:", episode_kpi)
-
-    portfolio_summary = summarize_portfolio([episode_kpi])
+    kpi = evaluate_bids(dummy_bids, winner_idx=0, treaty=dummy_treaty)
+    print("Episode KPI:", kpi)
+    portfolio_summary = summarize_portfolio([kpi])
     print("Portfolio Summary:", portfolio_summary)

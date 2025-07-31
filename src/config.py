@@ -1,67 +1,73 @@
-# src/config.py
-
 """
-Configuration file for Reinsurance Demo
-Centralizes hyperparameters, paths, and model settings
+config.py
+---------
+Central configuration for ClauseLens demo, training, and reporting.
+Manages all file paths, model parameters, and global constants.
 """
 
 import os
+from pathlib import Path
 
-# =========================
-# Project Paths
-# =========================
+# ---------------------------
+# Project Root
+# ---------------------------
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DATA_DIR = os.path.join(BASE_DIR, "data")
+# ---------------------------
+# Data Paths
+# ---------------------------
+DATA_DIR = PROJECT_ROOT / "data"
+SAMPLE_TREATIES_PATH = DATA_DIR / "sample_treaties.json"
+CLAUSES_PATH = DATA_DIR / "clauses_corpus.json"
 
-CLAUSE_CORPUS_PATH = os.path.join(DATA_DIR, "clauses_corpus.json")
-SAMPLE_TREATIES_PATH = os.path.join(DATA_DIR, "sample_treaties.json")
+# ---------------------------
+# Model & Simulation Settings
+# ---------------------------
+NUM_AGENTS = 3
+DEFAULT_EPISODES = 5
+TOP_K_CLAUSES = 3
 
-SAMPLE_RESULTS_DIR = os.path.join(DATA_DIR, "sample_results")
+# Optional: semantic model for clause retrieval
+USE_SEMANTIC_RETRIEVAL = True
+SEMANTIC_MODEL_NAME = "all-MiniLM-L6-v2"
 
-# =========================
-# Multi-Agent Environment Settings
-# =========================
-NUM_AGENTS = 3                  # Number of MARL bidding agents in demo
-DISCOUNT_FACTOR = 0.99          # RL gamma
-EPISODE_LENGTH = 1              # Each demo run = single treaty placement
+# ---------------------------
+# Training / Checkpoints
+# ---------------------------
+CHECKPOINT_DIR = PROJECT_ROOT / "experiments" / "checkpoints"
+CHECKPOINT_DIR.mkdir(parents=True, exist_ok=True)
 
-# =========================
-# MARL Training Hyperparameters
-# =========================
-TRAINING_EPISODES = 10000
-BATCH_SIZE = 1024
-LEARNING_RATE_ACTOR = 1e-4
-LEARNING_RATE_CRITIC = 1e-3
-CVaR_ALPHA = 0.95               # Tail risk quantile
-RISK_AVERSION = 0.1             # Higher = more conservative bids
+# ---------------------------
+# Logging & Reporting
+# ---------------------------
+LOG_DIR = PROJECT_ROOT / "logs"
+LOG_DIR.mkdir(parents=True, exist_ok=True)
 
-# =========================
-# Clause Retrieval Settings
-# =========================
-USE_TRANSFORMERS = True         # Set to False if using TF-IDF fallback
-CLAUSE_TOP_K = 3                # Number of clauses to retrieve
-EMBEDDING_MODEL = "all-MiniLM-L6-v2"  # SentenceTransformer model
+REPORTS_DIR = PROJECT_ROOT / "reports"
+REPORTS_DIR.mkdir(parents=True, exist_ok=True)
 
-# =========================
-# Explanation Generator Settings
-# =========================
-EXPLANATION_MODEL = "google/flan-t5-small"
-EXPLANATION_MAX_LEN = 100
+DEFAULT_PDF_NAME = "ClauseLens_Demo_Report.pdf"
 
-# =========================
-# Visualization / Demo Settings
-# =========================
-SHOW_ANIMATION = True
-SAVE_RESULTS = True
-DASHBOARD_REFRESH_RATE = 1.0    # seconds
+# ---------------------------
+# Visualization
+# ---------------------------
+FIGURES_DIR = PROJECT_ROOT / "figures"
+FIGURES_DIR.mkdir(parents=True, exist_ok=True)
 
-# =========================
+DEFAULT_CHART_PATH = FIGURES_DIR / "profit_vs_cvar.png"
+
+# ---------------------------
 # Utility Functions
-# =========================
+# ---------------------------
 def ensure_directories():
-    """Ensure that required directories exist."""
-    os.makedirs(SAMPLE_RESULTS_DIR, exist_ok=True)
+    """Ensure that all required directories exist."""
+    for path in [DATA_DIR, LOG_DIR, REPORTS_DIR, FIGURES_DIR, CHECKPOINT_DIR]:
+        os.makedirs(path, exist_ok=True)
 
-ensure_directories()
 
+if __name__ == "__main__":
+    # Quick check for paths
+    print("Project Root:", PROJECT_ROOT)
+    print("Sample Treaties:", SAMPLE_TREATIES_PATH.exists())
+    print("Clauses Corpus:", CLAUSES_PATH.exists())
+    ensure_directories()
