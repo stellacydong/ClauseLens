@@ -1,72 +1,78 @@
+# app/components/portfolio_summary.py
+
+import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
-import streamlit as st
 
-def display_portfolio_kpis(summary_marl, summary_baseline=None, title="📊 Portfolio Summary KPIs"):
+
+class PortfolioSummary:
     """
-    Display portfolio-level KPIs for MARL (and optionally Baseline).
+    Component to render portfolio-level summaries including KPIs,
+    multi-episode performance charts, and compliance stats.
     """
-    st.markdown(f"## {title}")
 
-    if summary_baseline:
-        col1, col2, col3, col4, col5, col6 = st.columns(6)
-        col1.metric("MARL Avg Profit ($)", f"{summary_marl['avg_profit']:,.0f}")
-        col2.metric("MARL Avg CVaR ($)", f"{summary_marl['avg_cvar']:,.0f}")
-        col3.metric("MARL Compliance Rate", f"{summary_marl['compliance_rate']*100:.0f}%")
-        col4.metric("Base Avg Profit ($)", f"{summary_baseline['avg_profit']:,.0f}")
-        col5.metric("Base Avg CVaR ($)", f"{summary_baseline['avg_cvar']:,.0f}")
-        col6.metric("Base Compliance Rate", f"{summary_baseline['compliance_rate']*100:.0f}%")
-    else:
-        col1, col2, col3 = st.columns(3)
-        col1.metric("Avg Profit ($)", f"{summary_marl['avg_profit']:,.0f}")
-        col2.metric("Avg CVaR ($)", f"{summary_marl['avg_cvar']:,.0f}")
-        col3.metric("Compliance Rate", f"{summary_marl['compliance_rate']*100:.0f}%")
+    def __init__(self):
+        pass
 
+    def render_kpis(self, summary_marl, summary_baseline):
+        """
+        Render top-level KPIs for MARL agents and Baseline pricing side-by-side.
+        """
+        st.markdown("### 📊 Portfolio Summary KPIs")
+        col1, col2 = st.columns(2)
 
-def display_episode_table(portfolio_results_marl, portfolio_results_baseline=None):
-    """
-    Show a compact episode results table for all episodes.
-    """
-    episodes_data = []
-    for i, marl_kpi in enumerate(portfolio_results_marl, 1):
-        row = {
-            "Episode": i,
-            "MARL Profit ($)": f"{marl_kpi['profit']:,.0f}",
-            "MARL CVaR ($)": f"{marl_kpi['cvar']:,.0f}",
-            "MARL Comp": "P" if marl_kpi['regulatory_flags']['all_ok'] else "F",
-        }
-        if portfolio_results_baseline:
-            base_kpi = portfolio_results_baseline[i-1]
-            row.update({
-                "Base Profit ($)": f"{base_kpi['profit']:,.0f}",
-                "Base CVaR ($)": f"{base_kpi['cvar']:,.0f}",
-                "Base Comp": "P" if base_kpi['regulatory_flags']['all_ok'] else "F",
-            })
-        episodes_data.append(row)
+        with col1:
+            st.subheader("MARL Agents")
+            c1, c2, c3 = st.columns(3)
+            c1.metric("Avg Profit ($)", f"{summary_marl['avg_profit']:,.0f}")
+            c2.metric("Avg CVaR ($)", f"{summary_marl['avg_cvar']:,.0f}")
+            c3.metric("Compliance Rate", f"{summary_marl['compliance_rate']*100:.0f}%")
 
-    df = pd.DataFrame(episodes_data)
-    st.markdown("### Episode Results (Compact)")
-    st.dataframe(df, use_container_width=True, height=220)
+        with col2:
+            st.subheader("Baseline Pricing")
+            c1, c2, c3 = st.columns(3)
+            c1.metric("Avg Profit ($)", f"{summary_baseline['avg_profit']:,.0f}")
+            c2.metric("Avg CVaR ($)", f"{summary_baseline['avg_cvar']:,.0f}")
+            c3.metric("Compliance Rate", f"{summary_baseline['compliance_rate']*100:.0f}%")
 
+    def render_episode_table(self, episodes_df: pd.DataFrame):
+        """
+        Render a compact table of episode-level results.
+        """
+        st.markdown("### 📄 Episode Results Table")
+        st.dataframe(episodes_df, use_container_width=True, height=260)
 
-def display_profit_vs_cvar_chart(portfolio_results_marl, portfolio_results_baseline=None):
-    """
-    Display Profit vs CVaR chart for MARL and optionally Baseline.
-    """
-    marl_profits = [res["profit"] for res in portfolio_results_marl]
-    marl_cvar = [res["cvar"] for res in portfolio_results_marl]
+    def render_profit_vs_cvar(self, portfolio_results_marl, portfolio_results_baseline):
+        """
+        Render a Profit vs CVaR (Tail Risk) scatter plot.
+        """
+        st.markdown("### 📈 Profit vs Tail-Risk (CVaR)")
 
-    plt.figure(figsize=(6, 4))
-    plt.scatter(marl_cvar, marl_profits, color="green", label="MARL Agent")
-
-    if portfolio_results_baseline:
+        marl_profits = [res["profit"] for res in portfolio_results_marl]
+        marl_cvar = [res["cvar"] for res in portfolio_results_marl]
         base_profits = [res["profit"] for res in portfolio_results_baseline]
         base_cvar = [res["cvar"] for res in portfolio_results_baseline]
-        plt.scatter(base_cvar, base_profits, color="red", label="Baseline")
 
-    plt.xlabel("CVaR (Tail Risk $)")
-    plt.ylabel("Profit ($)")
-    plt.title("Profit vs Tail-Risk (CVaR)")
-    plt.legend()
-    st.pyplot(plt.gcf())
+        fig, ax = plt.subplots(figsize=(6, 4))
+        ax.scatter(base_cvar, base_profits, color="red", label="Baseline")
+        ax.scatter(marl_cvar, marl_profits, color="green", label="MARL Agent")
+        ax.set_xlabel("CVaR (Tail Risk $)")
+        ax.set_ylabel("Profit ($)")
+        ax.set_title("Profit vs Tail-Risk Comparison")
+        ax.legend()
+        st.pyplot(fig)
 
+    def render_full_summary(
+        self,
+        summary_marl,
+        summary_baseline,
+        episodes_df: pd.DataFrame,
+        portfolio_results_marl,
+        portfolio_results_baseline,
+    ):
+        """
+        High-level method to render the entire portfolio summary section.
+        """
+        self.render_kpis(summary_marl, summary_baseline)
+        self.render_episode_table(episodes_df)
+        self.render_profit_vs_cvar(portfolio_results_marl, portfolio_results_baseline)

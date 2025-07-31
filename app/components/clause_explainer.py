@@ -1,63 +1,83 @@
-import random
+# app/components/clause_explainer.py
 import json
+import random
 import os
+import streamlit as st
 
 class ClauseExplainerComponent:
-    """
-    Clause Explainer Component for ClauseLens Demo.
-    Retrieves sample regulatory clauses and generates human-readable explanations.
-    """
-
-    def __init__(self, clause_file="data/clauses_corpus.json", seed=None):
+    def __init__(self, clauses_file="data/clauses_corpus.json", max_clauses=3):
+        """
+        Initialize the Clause Explainer.
+        Args:
+            clauses_file: path to the JSON file containing clauses
+            max_clauses: maximum clauses to retrieve per treaty
+        """
+        self.max_clauses = max_clauses
         self.clauses = []
-        if os.path.exists(clause_file):
-            with open(clause_file) as f:
+        if os.path.exists(clauses_file):
+            with open(clauses_file, "r") as f:
                 self.clauses = json.load(f)
         else:
-            # Fallback synthetic clauses
-            self.clauses = [
-                {"id": 1, "text": "Solvency II Article 101 requires sufficient capital coverage.", "category": "Solvency"},
-                {"id": 2, "text": "IFRS 17 mandates transparency in reporting expected losses.", "category": "Reporting"},
-                {"id": 3, "text": "NAIC RBC requires tail-risk stress testing for catastrophe treaties.", "category": "Risk"},
-            ]
-        if seed is not None:
-            random.seed(seed)
-
-    def retrieve_clauses(self, treaty, n=3):
+            st.warning(f"⚠️ Clause corpus not found at {clauses_file}")
+        
+    def retrieve_clauses(self, treaty):
         """
-        Retrieve relevant clauses for a treaty.
-        Currently random for demo purposes.
+        Retrieve relevant clauses for a treaty. 
+        Simple heuristic: match by peril, region, or random fallback.
         """
         if not self.clauses:
             return []
-        return random.sample(self.clauses, min(n, len(self.clauses)))
 
-    def generate_explanation(self, treaty, winning_bid, clauses):
-        """
-        Generate a simple ClauseLens explanation for the winning bid.
-        """
-        if not clauses:
-            return "No clauses retrieved for this treaty."
+        peril = treaty.get("peril", "").lower()
+        region = treaty.get("region", "").lower()
 
-        # Example logic: tie clauses to treaty features
-        explanation_lines = [
-            f"This quote for {treaty.get('cedent','Unknown')} ({treaty.get('peril','N/A')}) "
-            f"complies with key capital and reporting requirements."
-        ]
+        # Heuristic: filter clauses by category or jurisdiction
+        candidates = []
+        for clause in self.clauses:
+            text = clause["text"].lower()
+            if peril in text or region in text:
+                candidates.append(clause)
+
+        # Fallback to random clauses if none match
+        if not candidates:
+            candidates = random.sample(self.clauses, min(self.max_clauses, len(self.clauses)))
+        else:
+            candidates = random.sample(candidates, min(self.max_clauses, len(candidates)))
+
+        return candidates
+
+    def generate_explanation(self, treaty, clauses):
+        """
+        Generate a clause-grounded explanation for investors.
+        """
+        cedent = treaty.get("cedent", "This cedent")
+        peril = treaty.get("peril", "the peril")
+        region = treaty.get("region", "its region")
+
+        explanation = (
+            f"{cedent}'s reinsurance program for {peril} in {region} "
+            f"is evaluated against key regulatory and risk guidelines. "
+            f"Based on retrieved clauses, the proposed treaty aligns with:\n"
+        )
+
         for clause in clauses:
-            explanation_lines.append(f"- {clause['text']}")
+            explanation += f"- {clause['category']}: {clause['text']}\n"
 
-        # Tail-risk mention if applicable
-        if winning_bid.get("tail_risk", 0) > 0.25 * winning_bid.get("premium", 1):
-            explanation_lines.append("⚠️ High tail-risk component; review Solvency compliance.")
+        return explanation
 
-        return "\n".join(explanation_lines)
-
-    def explain_treaty(self, treaty, winning_bid, n=3):
+    def display(self, treaty):
         """
-        Convenience function to retrieve clauses and generate explanation in one step.
-        Returns (clauses, explanation).
+        Streamlit visualization: shows clauses and explanation for the given treaty.
         """
-        clauses = self.retrieve_clauses(treaty, n=n)
-        explanation = self.generate_explanation(treaty, winning_bid, clauses)
+        st.markdown("### 📄 ClauseLens Explanation")
+
+        # Retrieve and display clauses
+        clauses = self.retrieve_clauses(treaty)
+        explanation = self.generate_explanation(treaty, clauses)
+
+        st.info(explanation)
+        st.markdown("#### Retrieved Clauses")
+        for clause in clauses:
+            st.write(f"**[{clause['category']}]** {clause['text']} *(Jurisdiction: {clause['jurisdiction']})*")
+
         return clauses, explanation

@@ -1,105 +1,132 @@
+# app/stress_dashboard.py
+
 import os
-import sys
 import json
-import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import streamlit as st
+import matplotlib.pyplot as plt
 
-# Ensure project root is in Python path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from experiments.stress_test import run_stress_test, STRESS_SCENARIOS
-
-RESULTS_FILE = "experiments/stress_test_results.json"
-
-# ---------------------------
-# Streamlit Page Config
-# ---------------------------
 st.set_page_config(page_title="ClauseLens Stress Test Dashboard", layout="wide")
-st.title("⚡ ClauseLens Stress Test Dashboard")
-
+st.title("⚡ Stress Test Dashboard – ClauseLens Reinsurance Analytics")
 st.markdown("""
-This dashboard visualizes **catastrophe & capital stress tests** for ClauseLens MARL agents.
-
-- **High‑Cat Frequency:** Simulates spike in catastrophe claims  
-- **Capital Reduction:** 20% lower solvency buffer, stricter compliance  
-- **Severe Tail Scenario:** Extreme tail risk and capital stress  
-
-The dashboard highlights **Profit, CVaR, and Compliance** under each scenario.
+This dashboard visualizes **catastrophe and capital stress test results**  
+for MARL-driven treaty bidding vs Baseline actuarial pricing.
 """)
+
+# ---------------------------
+# Load Results
+# ---------------------------
+RESULTS_FILE = os.path.join("experiments", "stress_test_results.json")
+
+if not os.path.exists(RESULTS_FILE):
+    st.error(f"Stress test results not found at `{RESULTS_FILE}`. Run `experiments/stress_test.py` first.")
+    st.stop()
+
+with open(RESULTS_FILE, "r") as f:
+    results_data = json.load(f)
+
+results_df = pd.DataFrame(results_data["results"])
+summary_marl = results_data["marl_summary"]
+summary_baseline = results_data["baseline_summary"]
 
 # ---------------------------
 # Sidebar Controls
 # ---------------------------
-st.sidebar.header("Stress Test Controls")
-rerun = st.sidebar.button("🔄 Run New Stress Test")
-episodes = st.sidebar.slider("Episodes per Scenario", 10, 100, 50)
+st.sidebar.header("Filters")
+selected_scenario = st.sidebar.selectbox(
+    "Stress Scenario",
+    ["All"] + sorted(results_df["stress_scenario"].unique())
+)
+selected_metric = st.sidebar.selectbox(
+    "Metric to Visualize",
+    ["Profit ($)", "CVaR ($)", "Compliance Rate (%)"]
+)
 
-# ---------------------------
-# Run or Load Stress Test
-# ---------------------------
-if rerun or not os.path.exists(RESULTS_FILE):
-    st.info("Running fresh stress tests...")
-    results = run_stress_test(num_episodes=episodes)
-    with open(RESULTS_FILE, "w") as f:
-        json.dump(results, f, indent=2)
+# Apply filter
+if selected_scenario != "All":
+    filtered_df = results_df[results_df["stress_scenario"] == selected_scenario]
 else:
-    st.success(f"Loaded results from {RESULTS_FILE}")
-    with open(RESULTS_FILE) as f:
-        results = json.load(f)
+    filtered_df = results_df.copy()
 
 # ---------------------------
-# Display Results Table
+# KPI Summary
 # ---------------------------
-st.markdown("## 📊 Stress Test Results Summary")
-
-summary_data = []
-for scenario_name, metrics in results.items():
-    summary_data.append({
-        "Scenario": scenario_name,
-        "Episodes": metrics["episodes"],
-        "Avg Profit ($)": f"{metrics['avg_profit']:,.0f}",
-        "Avg CVaR ($)": f"{metrics['avg_cvar']:,.0f}",
-        "Compliance Rate": f"{metrics['compliance_rate']*100:.0f}%",
-    })
-
-summary_df = pd.DataFrame(summary_data)
-st.dataframe(summary_df, use_container_width=True)
-
-# ---------------------------
-# Visual Charts
-# ---------------------------
-st.markdown("## 📈 Stress Test Visualizations")
+st.markdown("### 📊 Portfolio KPI Summary")
 
 col1, col2 = st.columns(2)
-
-# --- Compliance Bar Chart ---
 with col1:
-    compliance_rates = [v["compliance_rate"]*100 for v in results.values()]
-    plt.figure(figsize=(5,4))
-    plt.bar(results.keys(), compliance_rates, color=["orange", "red", "purple"])
-    plt.ylabel("Compliance Rate (%)")
-    plt.title("Compliance Rate Under Stress")
-    plt.xticks(rotation=15)
-    st.pyplot(plt.gcf())
+    st.subheader("MARL Agents")
+    st.metric("Avg Profit ($)", f"{summary_marl['avg_profit']:,.0f}")
+    st.metric("Avg CVaR ($)", f"{summary_marl['avg_cvar']:,.0f}")
+    st.metric("Compliance Rate", f"{summary_marl['compliance_rate']*100:.0f}%")
 
-# --- Profit vs CVaR Scatter ---
 with col2:
-    profits = [v["avg_profit"] for v in results.values()]
-    cvars = [v["avg_cvar"] for v in results.values()]
-
-    plt.figure(figsize=(5,4))
-    plt.scatter(cvars, profits, s=120, c=["orange","red","purple"], alpha=0.8)
-    for i, name in enumerate(results.keys()):
-        plt.annotate(name, (cvars[i], profits[i]+10000), fontsize=8, ha="center")
-    plt.xlabel("Avg CVaR (Tail Risk $)")
-    plt.ylabel("Avg Profit ($)")
-    plt.title("Profit vs Tail-Risk (CVaR) by Scenario")
-    st.pyplot(plt.gcf())
+    st.subheader("Baseline Pricing")
+    st.metric("Avg Profit ($)", f"{summary_baseline['avg_profit']:,.0f}")
+    st.metric("Avg CVaR ($)", f"{summary_baseline['avg_cvar']:,.0f}")
+    st.metric("Compliance Rate", f"{summary_baseline['compliance_rate']*100:.0f}%")
 
 # ---------------------------
-# Scenario Details
+# Episode-Level Results Table
 # ---------------------------
-st.markdown("## 🧐 Scenario Definitions")
-st.table(pd.DataFrame(STRESS_SCENARIOS))
+st.markdown("### 📄 Episode Results Table (Filtered)")
+st.dataframe(filtered_df, use_container_width=True, height=300)
+
+# ---------------------------
+# Visualization
+# ---------------------------
+st.markdown("### 📈 Profit vs Tail-Risk (CVaR) Scatter Plot")
+
+fig, ax = plt.subplots(figsize=(7, 5))
+ax.scatter(
+    filtered_df["marl_cvar"], filtered_df["marl_profit"],
+    color="green", alpha=0.6, label="MARL Agent"
+)
+ax.scatter(
+    filtered_df["baseline_cvar"], filtered_df["baseline_profit"],
+    color="red", alpha=0.6, label="Baseline"
+)
+ax.set_xlabel("CVaR (Tail Risk $)")
+ax.set_ylabel("Profit ($)")
+ax.set_title(f"Profit vs CVaR – {selected_scenario if selected_scenario!='All' else 'All Scenarios'}")
+ax.legend()
+st.pyplot(fig)
+
+# ---------------------------
+# Scenario Performance Bar Chart
+# ---------------------------
+st.markdown("### 📊 Scenario Performance Comparison")
+
+scenario_summary = (
+    filtered_df.groupby("stress_scenario")
+    .agg({
+        "marl_profit": "mean",
+        "marl_cvar": "mean",
+        "baseline_profit": "mean",
+        "baseline_cvar": "mean"
+    })
+    .reset_index()
+)
+
+fig2, ax2 = plt.subplots(figsize=(8, 4))
+width = 0.35
+x = range(len(scenario_summary))
+ax2.bar(x, scenario_summary["marl_profit"], width, label="MARL Profit", color="green", alpha=0.7)
+ax2.bar([p + width for p in x], scenario_summary["baseline_profit"], width, label="Baseline Profit", color="red", alpha=0.7)
+ax2.set_xticks([p + width/2 for p in x])
+ax2.set_xticklabels(scenario_summary["stress_scenario"], rotation=45, ha="right")
+ax2.set_ylabel("Profit ($)")
+ax2.set_title("Average Profit by Stress Scenario")
+ax2.legend()
+st.pyplot(fig2)
+
+# ---------------------------
+# Export Filtered Results
+# ---------------------------
+st.markdown("### 📥 Export Filtered Results")
+st.download_button(
+    "Download Filtered Results as CSV",
+    filtered_df.to_csv(index=False).encode("utf-8"),
+    file_name="stress_test_filtered_results.csv",
+    mime="text/csv"
+)

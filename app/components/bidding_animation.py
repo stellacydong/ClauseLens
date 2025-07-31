@@ -1,60 +1,80 @@
+# app/components/bidding_animation.py
 import time
 import numpy as np
-import pandas as pd
 import streamlit as st
 
-def simulate_bidding(agents, treaty, steps=50, delay=0.02):
+def simulate_bidding(agents, treaty, steps=50, delay=0.05):
     """
-    Simulate and animate a live bidding process in Streamlit.
-
+    Simulates live bidding between MARL agents.
     Args:
-        agents (list): List of MARLAgent instances (or dicts with get_bid()).
-        treaty (dict): Current treaty for bidding.
-        steps (int): Number of animation steps to simulate.
-        delay (float): Delay (in seconds) per step for animation effect.
-
+        agents: list of MARLAgent instances or callables
+        treaty: dict of treaty parameters
+        steps: number of bid steps to visualize
+        delay: delay (seconds) per step for animation
     Returns:
-        list of dict: Final bids for all agents
+        bids: list of final bid dictionaries from all agents
     """
+    bids = []
+
+    # Initialize placeholders for live animation
+    bid_table_placeholder = st.empty()
     progress_bar = st.progress(0)
     status_text = st.empty()
-    bid_chart = st.empty()
-
-    # Initialize bid history
-    history = {f"Agent {i}": [] for i in range(len(agents))}
 
     for step in range(steps):
-        status_text.text(f"Simulating bids... Step {step+1}/{steps}")
+        status_text.text(f"🟢 Bidding Step {step + 1}/{steps}")
 
-        # Each agent generates a bid (simulate incremental bidding)
-        current_bids = []
-        for idx, agent in enumerate(agents):
-            bid = agent.get_bid(treaty) if hasattr(agent, "get_bid") else agent(treaty)
-            # Simulate bid increasing slightly over steps
-            bid["premium"] *= (0.95 + 0.1 * step / steps)
-            current_bids.append(bid)
-            history[f"Agent {idx}"].append(bid["premium"])
+        step_bids = []
+        for agent_idx, agent in enumerate(agents):
+            # Support both agent objects and callable functions
+            if hasattr(agent, "get_bid"):
+                bid = agent.get_bid(treaty)
+            else:
+                bid = agent(treaty)
 
-        # Update line chart of bid premiums
-        df = pd.DataFrame(history)
-        bid_chart.line_chart(df)
+            bid["agent_id"] = f"Agent_{agent_idx+1}"
+            bid["step"] = step + 1
+            step_bids.append(bid)
 
-        # Update progress bar
-        progress_bar.progress(int((step + 1) / steps * 100))
+        # Append the most recent bids for final output
+        bids = step_bids
+
+        # Display live bidding table
+        bid_table_placeholder.table([
+            {
+                "Agent": bid["agent_id"],
+                "Quota Share": f"{bid['quota_share']:.0%}",
+                "Premium ($)": f"{bid['premium']:,.0f}",
+                "Expected Loss ($)": f"{bid['expected_loss']:,.0f}",
+                "Tail Risk ($)": f"{bid['tail_risk']:,.0f}"
+            }
+            for bid in step_bids
+        ])
+
+        # Update progress
+        progress_bar.progress((step + 1) / steps)
         time.sleep(delay)
 
-    status_text.text("Bidding Complete ✅")
-    return current_bids
+    status_text.text("✅ Bidding Complete")
+    return bids
 
-def live_bidding_summary(bids):
-    """
-    Display the final bids from live simulation.
-    """
-    st.markdown("### Final Bids")
-    st.dataframe(pd.DataFrame(bids), use_container_width=True)
 
-    # Highlight winning bid (highest profit)
-    profits = [b["premium"] - b["expected_loss"] for b in bids]
-    winner_idx = int(np.argmax(profits))
-    st.success(f"🏆 Winning Agent: Agent {winner_idx} with Profit ${profits[winner_idx]:,.0f}")
-    return winner_idx
+def pick_winning_bid(bids):
+    """
+    Pick the winning bid based on a simple profit - tail risk tradeoff.
+    Args:
+        bids: list of bid dictionaries
+    Returns:
+        dict: winning bid
+    """
+    if not bids:
+        return None
+
+    # Simple scoring: Profit ~ premium - expected loss
+    # Risk penalty ~ tail_risk
+    def score_bid(bid):
+        profit = bid["premium"] - bid["expected_loss"]
+        return profit - 0.5 * bid["tail_risk"]
+
+    winning_bid = max(bids, key=score_bid)
+    return winning_bid
