@@ -1,0 +1,20 @@
+{
+  "High-Cat Frequency": {
+    "avg_profit": -27054.027196669576,
+    "avg_cvar": 611039.8051373464,
+    "compliance_rate": 0.0,
+    "episodes": 31
+  },
+  "Capital Reduction 20%": {
+    "avg_profit": 146596.4135625785,
+    "avg_cvar": 439719.7510168889,
+    "compliance_rate": 0.8387096774193549,
+    "episodes": 31
+  },
+  "Severe Tail Scenario": {
+    "avg_profit": 65933.39820913764,
+    "avg_cvar": 524034.82903407695,
+    "compliance_rate": 0.9354838709677419,
+    "episodes": 31
+  }
+}
