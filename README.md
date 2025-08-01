@@ -1,63 +1,180 @@
-# ClauseLens: Clause-Grounded, Risk-Constrained Quoting
+# **Transparent Market Platform for Reinsurance**
 
-This repository contains the LaTeX source, code, and supporting materials for:
+🚀 **AI-Powered, Clause-Grounded, Auditable Treaty Bidding**
 
-**ClauseLens: Clause-Grounded, Risk-Constrained Quoting for Trustworthy Reinsurance AI**
+We are building the **first broker-neutral, transparent reinsurance market platform** that combines:
 
-Stella C. Dong* and James R. Finlay
+1. **Open Treaty Bidding** – Multi-Agent Reinforcement Learning (MARL) for dynamic pricing
+2. **ClauseLens** – Clause-grounded quote explanations for regulatory transparency
+3. **MarketLens** – Market benchmarking & fairness dashboards
+4. **Governance Layer** – Human-in-the-loop oversight and audit logging
+
+This platform advances **reinsurance market efficiency, interpretability, and compliance**.
 
 ---
 
-## 📄 Paper
+## **📂 Repository Structure**
 
-- [PDF](paper/v3.pdf)
-- [LaTeX Source](paper/v3.tex)
+```
+TransparentMarketPlatform/
+│
+├── app/                         # Streamlit / YC demo dashboard
+│   ├── demo_app.py               # Main dashboard entry point
+│   ├── components/               # Modular UI elements
+│   │   ├── bidding_tab.py
+│   │   ├── clause_tab.py
+│   │   ├── marketlens_tab.py
+│   │   └── governance_tab.py
+│   ├── assets/                   # Images, logos, icons
+│   └── requirements.txt
+│
+├── marl_engine/                  # Multi-Agent Treaty Bidding (MAPPO + CVaR)
+│   ├── simulate_env.py
+│   ├── marl_agents.py
+│   ├── stress_tests.py
+│   ├── utils.py
+│   └── __init__.py
+│
+├── clauselens/                   # Clause-grounded explanation module
+│   ├── retrieval.py
+│   ├── explain.py
+│   ├── legal_corpus/             # (Optional) Clause texts / embeddings
+│   └── __init__.py
+│
+├── marketlens/                   # ML Benchmarking & Fairness
+│   ├── preprocess.py
+│   ├── train_marketlens.py
+│   ├── fairness_audit.py
+│   ├── models/                   # XGBoost/LightGBM trained models
+│   └── __init__.py
+│
+├── governance/                   # Human-in-the-loop oversight
+│   ├── policy_trace.py
+│   ├── override_interface.py
+│   └── __init__.py
+│
+├── data/                         # Synthetic & anonymized treaty data
+│   ├── treaties_synthetic.csv
+│   ├── treaties_anonymized.csv
+│   └── marketlens_features.parquet
+│
+├── notebooks/                    # Jupyter/Colab experiments
+│   ├── marl_training.ipynb
+│   ├── marketlens_training.ipynb
+│   ├── clauselens_demo.ipynb
+│   └── governance_prototype.ipynb
+│
+├── papers/                       # ICAIF 2025 submissions
+│   ├── Multi-AgentTreatyBiddingSystem.pdf
+│   ├── MarketLens.pdf
+│   ├── ClauseLens.pdf
+│   ├── GovernanceInLoop.pdf
+│   └── bibtex/
+│
+├── scripts/                      # Utility scripts
+│   ├── run_simulation.py
+│   ├── generate_dashboard_data.py
+│   └── export_report.py
+│
+├── tests/                        # Unit tests for reproducibility
+│   ├── test_marl.py
+│   ├── test_clauselens.py
+│   ├── test_marketlens.py
+│   └── test_governance.py
+│
+├── .gitignore
+├── README.md                     # Project overview and setup instructions
+├── LICENSE
+└── setup.py                      # Optional for packaging
+```
 
-## 🏗 Repository Contents
+---
 
-- `paper/` – LaTeX source and figures for the ICAIF 2025 submission.
-- `src/` – Core Python code for:
-  - Clause retrieval and embedding
-  - RA-CMDP reinforcement learning agent
-  - Natural language explanation generation
-  - Training and evaluation pipelines
-- `data/` – Sample legal clauses and synthetic treaty environments.
-- `experiments/` – Configs, logs, and results for reproducibility.
+## **🛠️ Installation**
 
-## ⚙️ Setup
+Clone the repository and set up the environment:
 
 ```bash
-git clone https://github.com/<username>/ClauseLens.git
-cd ClauseLens
-python3 -m venv venv
-source venv/bin/activate
+git clone https://github.com/YOUR_USERNAME/TransparentMarketPlatform.git
+cd TransparentMarketPlatform/app
 pip install -r requirements.txt
+```
 
+Recommended: Use **Python 3.10+** and a **virtual environment or conda**.
 
-ClauseLens/
-├── README.md
-├── LICENSE
-├── .gitignore
-├── paper/
-│   ├── v3.pdf                # Final compiled PDF
-│   ├── v3.tex                # Main LaTeX source
-│   ├── sections/             # (Optional) Split LaTeX sections for readability
-│   ├── figures/              # All figures in .pdf/.png/.tikz
-│   ├── tables/               # (Optional) CSVs or LaTeX table files
-│   ├── references.bib        # BibTeX file
-│   └── macros.tex            # (Optional) custom LaTeX macros
-├── src/
-│   ├── retrieval_pipeline.py  # Clause retrieval and embedding
-│   ├── ra_cmdp_agent.py       # RA-CMDP reinforcement learning agent
-│   ├── explanation_generator.py # Natural language rationale module
-│   ├── training_pipeline.py   # Full training loop with dual-projected PPO
-│   └── evaluation.py          # Evaluation metrics: CVaR, BLEU, clause recall
-├── data/
-│   ├── clauses/               # Legal/regulatory clause corpus (if allowed)
-│   ├── sample_envs/           # Simulated cedent & treaty JSONs
-│   └── README.md
-├── experiments/
-│   ├── configs/               # YAML/JSON config files for runs
-│   ├── logs/                  # Training logs
-│   └── results/               # Evaluation outputs
-└── requirements.txt           # Python dependencies
+---
+
+## **▶️ Run the YC Demo Dashboard**
+
+1. Navigate to the `app` folder:
+
+   ```bash
+   cd app
+   ```
+2. Launch the Streamlit dashboard:
+
+   ```bash
+   streamlit run demo_app.py
+   ```
+3. Open the local URL (usually `http://localhost:8501`) to interact with:
+
+   * **Live Treaty Bidding** (MARL engine simulation)
+   * **ClauseLens** (clause-grounded explanations)
+   * **MarketLens** (market benchmarking & fairness audit)
+   * **Governance Layer** (policy traces & manual override)
+
+---
+
+## **📊 Features in the YC Demo**
+
+* **Multi-Agent Treaty Bidding**
+
+  * Simulated agents compete with PPO/MAPPO under CVaR constraints
+  * Live Pareto plot of Profit vs. Tail Risk
+
+* **ClauseLens (Explainable Bids)**
+
+  * Retrieves clauses from Solvency II / IFRS 17 / NAIC
+  * Generates natural language quote justifications
+
+* **MarketLens (Benchmarking & Fairness)**
+
+  * Quote acceptance likelihood predictions
+  * Loss ratio deviation scoring
+  * SHAP-based fairness audit by reinsurer class
+
+* **Governance-in-the-Loop**
+
+  * Policy logging and trace visualization
+  * Counterfactual bid explanations
+  * Manual override for high-risk bids
+
+---
+
+## **📄 Papers and Research**
+
+This project is supported by 4 ICAIF 2025 companion papers:
+
+1. **Multi-Agent Treaty Bidding System** (Engine)
+2. **ClauseLens: Clause-Grounded Quote Explanation**
+3. **MarketLens: Benchmarking & Fairness**
+4. **Governance-in-the-Loop for Auditable MARL**
+
+See the [`papers/`](papers) folder for preprints.
+
+---
+
+## **🤝 Contributing**
+
+We welcome contributions!
+
+1. Fork the repo
+2. Create a feature branch (`feature/new-module`)
+3. Submit a pull request with detailed comments
+
+---
+
+## **📜 License**
+
+MIT License – free for research and non-commercial use.
+
