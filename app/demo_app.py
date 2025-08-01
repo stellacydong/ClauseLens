@@ -1,91 +1,95 @@
-# kpi_dashboard.py
-
-import time
+import os
+import sys
+import importlib
+import base64
 import streamlit as st
-import numpy as np
-import pandas as pd
-from plotly import graph_objects as go
 
-# Local imports from your project
-from simulate_env import run_simulation
-from portfolio_summary import compute_portfolio_metrics
-from report_generator import generate_report_pdf
+# -----------------------------
+# Streamlit Config
+# -----------------------------
+st.set_page_config(page_title="Transparent Market Platform – YC Demo", layout="wide")
 
-st.set_page_config(page_title="ClauseLens Demo Dashboard", layout="wide")
+# -----------------------------
+# Paths
+# -----------------------------
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
 
-st.title("ClauseLens Demo Dashboard")
-st.write("This dashboard animates MARL metrics for treaty pricing simulation.")
+COMPONENTS_DIR = os.path.join(PROJECT_ROOT, "app", "components")
+if COMPONENTS_DIR not in sys.path:
+    sys.path.insert(0, COMPONENTS_DIR)
 
-# --- Animated Metric Function ---
-def animate_metric(container, start_value, end_value, label, fmt="{:,.2f}", duration=1.5):
-    steps = 20
-    for i in range(steps + 1):
-        interpolated = start_value + (end_value - start_value) * (i / steps)
-        container.metric(label, fmt.format(interpolated))
-        time.sleep(duration / steps)
+ASSETS_DIR = os.path.join(PROJECT_ROOT, "app", "assets")
+LOGO_PATH = os.path.join(ASSETS_DIR, "logo.png")
 
-# --- Gauge Chart for Clause Compliance ---
-def compliance_gauge(value: float):
-    fig = go.Figure(go.Indicator(
-        mode="gauge+number",
-        value=value,
-        title={'text': "Clause Compliance (%)"},
-        gauge={
-            'axis': {'range': [0, 100]},
-            'bar': {'color': "darkblue"},
-            'steps': [
-                {'range': [0, 60], 'color': "red"},
-                {'range': [60, 80], 'color': "yellow"},
-                {'range': [80, 100], 'color': "green"},
-            ],
-        }
-    ))
-    fig.update_layout(height=300, margin=dict(t=20, b=0, l=0, r=0))
-    return fig
+# -----------------------------
+# Load & Display Professional Header
+# -----------------------------
+if os.path.exists(LOGO_PATH):
+    with open(LOGO_PATH, "rb") as f:
+        logo_data = f.read()
+    encoded_logo = base64.b64encode(logo_data).decode()
+    logo_html = f'<img src="data:image/png;base64,{encoded_logo}" style="height:80px;" alt="Logo">'
+else:
+    logo_html = '<span style="font-size:72px;">🌐</span>'
 
-# --- Initialize columns ---
-kpi_col1, kpi_col2, kpi_col3 = st.columns(3)
+st.markdown(f"""
+    <div style="text-align:center; padding-top: 1rem; padding-bottom: 1rem;">
+        {logo_html}
+        <h1 style="margin-bottom:0.2rem;">Transparent Market Platform</h1>
+        <p style="font-size:1.1rem; color:gray;">
+            Clause-grounded • Risk-constrained • YC-ready Reinsurance Intelligence
+        </p>
+    </div>
+""", unsafe_allow_html=True)
 
-if "prev_metrics" not in st.session_state:
-    st.session_state.prev_metrics = {
-        "profit": 100_000,
-        "cvar": 0.25,
-        "compliance": 85.0
-    }
+# -----------------------------
+# Dynamic Tab Imports (Hot Reload)
+# -----------------------------
+import components.bidding_tab as bidding_tab
+import components.clause_tab as clause_tab
+import components.marketlens_tab as marketlens_tab
+import components.governance_tab as governance_tab
 
-# --- Button to run simulation ---
-if st.button("Run Simulation & Update Metrics"):
+def hot_reload_module(module):
+    """Reloads a tab module dynamically for live editing."""
+    try:
+        return importlib.reload(module)
+    except Exception as e:
+        st.error(f"Failed to reload module {module.__name__}: {e}")
+        return module
 
-    # 1. Run your MARL simulation
-    sim_results = run_simulation(episodes=100)
-    
-    # 2. Compute portfolio metrics
-    metrics = compute_portfolio_metrics(sim_results)
-    new_profit = metrics["avg_profit"]
-    new_cvar = metrics["portfolio_cvar"]
-    new_compliance = metrics["clause_compliance"]
+# -----------------------------
+# Streamlit Tabs
+# -----------------------------
+tabs = st.tabs(["Live Market", "ClauseLens", "MarketLens", "Governance"])
 
-    # 3. Animate metrics
-    animate_metric(kpi_col1, st.session_state.prev_metrics["profit"], new_profit, "Avg MARL Profit ($)")
-    animate_metric(kpi_col2, st.session_state.prev_metrics["cvar"], new_cvar, "Portfolio CVaR", "{:.2f}")
-    
-    # Compliance metric with trend arrow
-    delta = new_compliance - st.session_state.prev_metrics["compliance"]
-    arrow = "▲" if delta >= 0 else "▼"
-    color = "green" if delta >= 0 else "red"
-    kpi_col3.markdown(f"<h3>Clause Compliance (%)</h3><h1 style='color:{color}'>{new_compliance:.2f} {arrow}</h1>", unsafe_allow_html=True)
-    
-    # 4. Gauge chart
-    st.plotly_chart(compliance_gauge(new_compliance), use_container_width=True)
+with tabs[0]:
+    bidding_tab = hot_reload_module(bidding_tab)
+    bidding_tab.render_bidding_tab()
 
-    # 5. Save state
-    st.session_state.prev_metrics = {
-        "profit": new_profit,
-        "cvar": new_cvar,
-        "compliance": new_compliance
-    }
+with tabs[1]:
+    clause_tab = hot_reload_module(clause_tab)
+    clause_tab.render_clause_tab()
 
-    # 6. Generate PDF report
-    pdf_path = generate_report_pdf(metrics)
-    st.download_button("Download Report", data=open(pdf_path, "rb"), file_name="ClauseLens_Report.pdf")
+with tabs[2]:
+    marketlens_tab = hot_reload_module(marketlens_tab)
+    marketlens_tab.render_marketlens_tab()
 
+with tabs[3]:
+    governance_tab = hot_reload_module(governance_tab)
+    governance_tab.render_governance_tab()
+
+# -----------------------------
+# Demo Mode Footer
+# -----------------------------
+st.markdown(
+    """
+    <hr style="margin-top:2rem; margin-bottom:0.5rem;">
+    <p style="text-align:center; font-size:0.9rem; color:gray;">
+        🔄 Hot‑reload enabled – edit any module in <code>app/components/</code> and refresh to see updates instantly.
+    </p>
+    """,
+    unsafe_allow_html=True
+)

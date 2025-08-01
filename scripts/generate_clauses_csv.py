@@ -1,0 +1,92 @@
+import pandas as pd
+import os
+
+def generate_clauses_csv(output_path: str):
+    """
+    Generate an expanded clauses.csv for ClauseLens with 50 realistic clauses
+    across Property, Casualty, Life, Specialty, and All lines.
+    """
+
+    clauses_data = [
+        # ---------------- Property ----------------
+        (1, "Solvency II Article 138 on capital requirements", "EU", "Property"),
+        (2, "NAIC RBC Property Risk Charge", "US", "Property"),
+        (3, "Solvency II Catastrophe Risk Submodule for Property", "EU", "Property"),
+        (4, "FEMA NFIP Guidelines on Property Catastrophe Risk", "US", "Property"),
+        (5, "Swiss FINMA Catastrophe Risk Assessment Standard", "CH", "Property"),
+        (6, "UK PRA Catastrophe Exposure and Reinsurance Guideline", "UK", "Property"),
+        (7, "APRA Prudential Standard GPS 116 for Property Risk", "AU", "Property"),
+        (8, "IFRS 17 Catastrophe Load Disclosure Requirement", "Global", "Property"),
+
+        # ---------------- Casualty ----------------
+        (9, "IFRS 17 disclosure requirement for Casualty", "Global", "Casualty"),
+        (10, "Solvency II Article 104 – Risk Module for Non-Life", "EU", "Casualty"),
+        (11, "NAIC Schedule F – Reinsurance Credit Requirements", "US", "Casualty"),
+        (12, "NAIC Annual Statement – Schedule P Loss Development", "US", "Casualty"),
+        (13, "Canadian OSFI Guideline B-9 – Earthquake Exposure", "CA", "Casualty"),
+        (14, "Lloyd's Minimum Standard – Liability Risk Reserving", "UK", "Casualty"),
+        (15, "Solvency II Motor Third-Party Liability Reserve Rule", "EU", "Casualty"),
+        (16, "IFRS 17 Premium Allocation Approach for Liability", "Global", "Casualty"),
+
+        # ---------------- Life ----------------
+        (17, "IFRS 17 Life Insurance Contract Measurement", "Global", "Life"),
+        (18, "Solvency II Standard Formula for Life Underwriting Risk", "EU", "Life"),
+        (19, "NAIC Life RBC C-2 Mortality Risk Charge", "US", "Life"),
+        (20, "APRA LPS 112 Capital Adequacy for Life Insurance", "AU", "Life"),
+        (21, "MAS Singapore RBC2 Life Catastrophe Risk", "SG", "Life"),
+        (22, "Solvency II Longevity Risk Submodule", "EU", "Life"),
+        (23, "IFRS 17 Life Contractual Service Margin Adjustment", "Global", "Life"),
+        (24, "Canadian OSFI Life Insurance Mortality Risk Guideline", "CA", "Life"),
+
+        # ---------------- Specialty ----------------
+        (25, "FATF Guidelines for Specialty Risk Contracts", "Global", "Specialty"),
+        (26, "NAIC Cyber Risk Reporting Requirement", "US", "Specialty"),
+        (27, "Lloyd's Minimum Standard for Cyber Risk", "UK", "Specialty"),
+        (28, "Solvency II Specialty Lines Stress Test Requirement", "EU", "Specialty"),
+        (29, "MAS Reinsurance for Marine & Aviation Specialty", "SG", "Specialty"),
+        (30, "APRA Specialty Lines Catastrophe Exposure Standard", "AU", "Specialty"),
+
+        # ---------------- Cross-Line / All ----------------
+        (31, "Solvency II Article 45 – ORSA Documentation", "EU", "All"),
+        (32, "IFRS 17 Appendix B – Contractual Service Margin", "Global", "All"),
+        (33, "Lloyd's Minimum Standard – Reinsurance Documentation", "UK", "All"),
+        (34, "IAIS Insurance Core Principle 13 – Reinsurance", "Global", "All"),
+        (35, "NAIC Model Law on Credit for Reinsurance", "US", "All"),
+        (36, "Swiss FINMA Circular 2017/3 on Reinsurance", "CH", "All"),
+        (37, "APRA GPS 230 – Reinsurance Management", "AU", "All"),
+        (38, "OSFI Guideline E-19 – Own Risk and Solvency Assessment", "CA", "All"),
+        (39, "FSA Japan Reinsurance Oversight Requirement", "JP", "All"),
+        (40, "Hong Kong IA GL20 – Group Risk & Reinsurance", "HK", "All"),
+
+        # ---------------- Emerging & Catastrophe Focus ----------------
+        (41, "Climate Risk Disclosure – TCFD Insurance Guidance", "Global", "Property"),
+        (42, "Solvency II Flood Catastrophe Add-On Requirement", "EU", "Property"),
+        (43, "NAIC Wildfire Risk Reporting Framework", "US", "Property"),
+        (44, "IFRS 17 Catastrophe Reserve Disclosure", "Global", "Property"),
+        (45, "European Insurance Stress Test – Catastrophe Module", "EU", "All"),
+        (46, "NAIC Catastrophe Risk Management Expectation", "US", "All"),
+        (47, "Swiss FINMA Catastrophe Risk Aggregation Guideline", "CH", "All"),
+        (48, "APRA Climate Change Financial Risk Guidance", "AU", "All"),
+        (49, "Lloyd's Catastrophe Exposure and Risk Mitigation Standard", "UK", "All"),
+        (50, "FATF Emerging Risk – Cyber and Climate Treaty Risk", "Global", "Specialty"),
+    ]
+
+    # Convert to DataFrame
+    clauses_df = pd.DataFrame(clauses_data, columns=["clause_id", "clause_text", "jurisdiction", "line_of_business"])
+
+    # Ensure output folder exists
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+    # Save CSV
+    clauses_df.to_csv(output_path, index=False)
+    print(f"✅ clauses.csv generated with {len(clauses_df)} rows at {output_path}")
+
+
+if __name__ == "__main__":
+    OUTPUT_PATH = "../clauselens/legal_corpus/clauses.csv"
+    generate_clauses_csv(OUTPUT_PATH)
+
+    # Optional: preview first 5 rows
+    preview_df = pd.read_csv(OUTPUT_PATH)
+    print("\nPreview of clauses.csv:")
+    print(preview_df.head())
