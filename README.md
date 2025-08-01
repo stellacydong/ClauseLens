@@ -104,6 +104,78 @@ Recommended: Use **Python 3.10+** and a **virtual environment or conda**.
 
 ---
 
+
+# Data Folder – Transparent Market Platform
+
+This folder contains synthetic and anonymized data for MARL simulation, MarketLens benchmarking, and ClauseLens demo.
+
+---
+
+## Folders
+
+data/
+│
+├── raw/                          # Unprocessed data (ignored in GitHub if large)
+│   ├── treaties_raw.csv           # Synthetic raw treaties (pre-cleaning)
+│   └── reinsurer_info.csv         # Cedent/reinsurer metadata
+│
+├── processed/                     # Cleaned data for model training/demo
+│   ├── treaties_synthetic.csv     # Synthetic treaty submissions (100k+)
+│   ├── treaties_anonymized.csv    # Optional: anonymized real treaty data
+│   ├── marketlens_features.parquet # Feature matrix for ML benchmarking
+│   └── marketlens_labels.parquet   # Labels for acceptance/loss predictions
+│
+├── demo/                          # Small sample for Streamlit demo
+│   ├── sample_treaties.csv
+│   └── sample_marketlens.parquet
+│
+└── README.md                      # Documentation of data sources & schema
+
+
+
+
+### 1. `raw/`
+- **Purpose**: Original, unprocessed data (ignored in public repo if sensitive)
+- **Files**:
+  - `treaties_raw.csv` – 100k+ synthetic treaty submissions with full metadata
+  - `reinsurer_info.csv` – Reinsurer and cedent metadata (incumbent flags, region)
+
+### 2. `processed/`
+- **Purpose**: Cleaned data ready for models and dashboards
+- **Files**:
+  - `treaties_synthetic.csv` – Primary dataset for simulation and training
+  - `treaties_anonymized.csv` – Optional, anonymized real treaty data
+  - `marketlens_features.parquet` – ML features for MarketLens model
+  - `marketlens_labels.parquet` – Labels: acceptance, loss ratio, deviation
+
+### 3. `demo/`
+- **Purpose**: Lightweight sample (~1,000 rows) for Streamlit demo
+- **Files**:
+  - `sample_treaties.csv`
+  - `sample_marketlens.parquet`
+
+---
+
+## Schema
+
+| Column                | Type    | Description                               |
+|-----------------------|--------|-------------------------------------------|
+| cedent_id             | str    | Unique cedent identifier                   |
+| reinsurer_id          | str    | Unique reinsurer identifier                |
+| treaty_type           | str    | "XoL" or "Quota Share"                     |
+| line_of_business      | str    | Property / Casualty / Specialty            |
+| region                | str    | Treaty jurisdiction                        |
+| premium               | float  | Quoted premium                             |
+| attachment_point      | float  | Attachment threshold for XoL               |
+| limit                 | float  | Coverage limit                             |
+| quota_share           | float  | % of ceded portfolio (for QS treaties)      |
+| accepted              | bool   | 1 if treaty was bound, 0 otherwise          |
+| observed_loss_ratio   | float  | Observed loss ratio for the treaty         |
+| cvar_95               | float  | Conditional Value at Risk (95%)            |
+
+
+
+
 ## **▶️ Run the YC Demo Dashboard**
 
 1. Navigate to the `app` folder:
