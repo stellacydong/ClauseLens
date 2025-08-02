@@ -1,11 +1,10 @@
-
 import sys
 import os
 
 # Add project root to Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-
+import numpy as np
 import pandas as pd
 from datetime import datetime
 
@@ -63,24 +62,50 @@ results_df = pd.concat(results, ignore_index=True)
 print(f"✅ Completed simulation: {len(results_df)} total bids")
 
 # -----------------------------
-# 4. Save Raw Simulation Results
+# 4. Generate Compliance Column
+# -----------------------------
+if "compliance" not in results_df.columns:
+    if "cvar" in results_df.columns:
+        # Compliance inversely related to CVaR (normalized to 0.6–1.0)
+        results_df["compliance"] = 1.0 - (
+            results_df["cvar"] / results_df["cvar"].max() * 0.4
+        )
+        results_df["compliance"] = results_df["compliance"].clip(lower=0.6, upper=1.0)
+    else:
+        # Random fallback for demo
+        results_df["compliance"] = 0.6 + 0.4 * np.random.rand(len(results_df))
+
+# -----------------------------
+# 5. Save Raw Simulation Results
 # -----------------------------
 save_results(results_df, SIM_RUNS_PATH)
 summary_df = save_episode_summaries(episode_summaries, SIM_SUMMARY_PATH)
 
 # -----------------------------
-# 5. Stress Test Simulation Results
+# 6. Stress Test Simulation Results
 # -----------------------------
 print("⚡ Running stress tests...")
 stressed_df = run_stress_tests(results_df)
+
+# Ensure compliance also exists in stressed simulation
+if "compliance" not in stressed_df.columns:
+    if "cvar" in stressed_df.columns:
+        stressed_df["compliance"] = 1.0 - (
+            stressed_df["cvar"] / stressed_df["cvar"].max() * 0.4
+        )
+        stressed_df["compliance"] = stressed_df["compliance"].clip(lower=0.6, upper=1.0)
+    else:
+        stressed_df["compliance"] = 0.6 + 0.4 * np.random.rand(len(stressed_df))
+
 save_results(stressed_df, SIM_STRESS_PATH)
 stress_summary = summarize_stress_results(stressed_df)
 print("✅ Stress Test Summary:", stress_summary)
 
 # -----------------------------
-# 6. Final Dashboard Message
+# 7. Final Dashboard Message
 # -----------------------------
 print("\n🎯 Simulation complete! Outputs ready for dashboard:")
 print(f"- Simulation runs:      {SIM_RUNS_PATH}")
 print(f"- Episode summary:      {SIM_SUMMARY_PATH}")
 print(f"- Stressed simulation:  {SIM_STRESS_PATH}")
+print("✅ Compliance column included in outputs.")

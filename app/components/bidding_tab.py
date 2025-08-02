@@ -1,65 +1,68 @@
-import os
-import time
-import numpy as np
-import pandas as pd
 import streamlit as st
-import plotly.express as px
-
-# Self-contained PROJECT_ROOT
-PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
-DATA_DEMO_DIR = os.path.join(PROJECT_ROOT, "data", "demo")
-
-
-def load_dashboard_data():
-    files = {
-        "kpis": "dashboard_kpis.csv",
-        "trends": "dashboard_trends.csv",
-        "bids": "dashboard_bids.csv"
-    }
-    data = {}
-    for key, fname in files.items():
-        path = os.path.join(DATA_DEMO_DIR, fname)
-        if os.path.exists(path):
-            data[key] = pd.read_csv(path)
-    return data
+import pandas as pd
+import subprocess
+import sys
+import os
 
 
-def animate_metric(placeholder, label, start_value, end_value, steps=30, delay=0.05):
-    values = np.linspace(start_value, end_value, steps)
-    is_increase = end_value >= start_value
-    delta_color = "normal" if is_increase else "inverse"
+# Add the parent of 'components' (i.e., the app folder) to sys.path
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+PARENT_DIR = os.path.dirname(CURRENT_DIR)
+if PARENT_DIR not in sys.path:
+    sys.path.append(PARENT_DIR)
 
-    for val in values:
-        arrow = "▲" if is_increase else "▼"
-        placeholder.metric(
-            label,
-            f"{val:,.2f}",
-            f"{arrow} {abs(end_value-start_value):,.2f}",
-            delta_color=delta_color
+from utils.load_data import load_simulation_results
+
+
+
+def render():
+    st.header("🤖 Multi-Agent Bidding Simulation (MAPPO Learning)")
+    st.write(
+        """
+        This tab runs the Multi-Agent PPO (MAPPO) simulation in the Treaty Bidding Environment.
+        The system learns bidding strategies and optimizes KPIs such as profit, win rate, and CVaR.
+        """
+    )
+
+    # -----------------------------------------------------------------------------
+    # Run Simulation Button
+    # -----------------------------------------------------------------------------
+    if st.button("▶️ Run MAPPO Simulation"):
+        st.info("Running MAPPO simulation... this may take a moment.")
+        result = subprocess.run(
+            [sys.executable, os.path.join(SCRIPTS_DIR, "03_run_simulation.py")],
+            capture_output=True, text=True
         )
-        time.sleep(delay)
 
-
-def render_bidding_tab():
-    st.subheader("Live Multi-Agent Treaty Bidding Simulation")
-    st.info("Click to animate the latest KPIs and compliance gauge.")
-
-    if st.button("⚡ Animate Live Market KPIs"):
-        data = load_dashboard_data()
-        if "kpis" in data and "bids" in data:
-            kpi_row = data["kpis"].tail(1).iloc[0]
-
-            col1, col2, col3 = st.columns(3)
-            animate_metric(col1, "Avg MARL Profit ($)", 0, kpi_row["avg_profit"])
-            animate_metric(col2, "Portfolio CVaR 95%", 0, kpi_row["avg_cvar"])
-            animate_metric(col3, "Clause Compliance (%)", 0, kpi_row["avg_compliance"] * 100)
-
-            if "trends" in data:
-                st.markdown("### KPI Trends")
-                fig = px.line(data["trends"], x="episode", y=["avg_profit", "avg_compliance"])
-                st.plotly_chart(fig, use_container_width=True)
-
-            st.markdown("### Recent Bids")
-            st.dataframe(data["bids"].tail(20), use_container_width=True)
+        if result.returncode == 0:
+            st.success("Simulation completed successfully.")
         else:
-            st.warning("Run `run_simulation.py` and `generate_dashboard_data.py` first.")
+            st.error("Simulation failed.")
+            st.text(result.stderr)
+
+    # -----------------------------------------------------------------------------
+    # Load Simulation Results
+    # -----------------------------------------------------------------------------
+    df = load_simulation_results()
+
+    if not df.empty:
+        st.subheader("📊 MAPPO Learning Curves")
+
+        # Ensure proper columns exist
+        required_cols = ["round", "avg_profit", "win_rate", "cvar_95"]
+        missing_cols = [col for col in required_cols if col not in df.columns]
+        if missing_cols:
+            st.warning(f"Missing columns in simulation results: {missing_cols}")
+            return
+
+        # Line charts for key KPIs
+        st.line_chart(df.set_index("round")[["avg_profit"]], height=200, use_container_width=True)
+        st.line_chart(df.set_index("round")[["win_rate"]], height=200, use_container_width=True)
+        st.line_chart(df.set_index("round")[["cvar_95"]], height=200, use_container_width=True)
+
+        # Data Table
+        st.subheader("Simulation Results Table")
+        st.dataframe(df)
+
+    else:
+        st.info("No simulation results found. Run the MAPPO simulation to generate KPIs.")

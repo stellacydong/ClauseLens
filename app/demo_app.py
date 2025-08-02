@@ -1,95 +1,137 @@
 import os
-import sys
-import importlib
-import base64
 import streamlit as st
+import numpy as np
+from datetime import datetime
+from streamlit_autorefresh import st_autorefresh
 
-# -----------------------------
-# Streamlit Config
-# -----------------------------
-st.set_page_config(page_title="Transparent Market Platform – YC Demo", layout="wide")
+# Import tab components
+from components import clause_tab, marketlens_tab, bidding_tab, governance_tab
 
-# -----------------------------
-# Paths
-# -----------------------------
-PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-if PROJECT_ROOT not in sys.path:
-    sys.path.insert(0, PROJECT_ROOT)
+# -----------------------------------------------------------------------------
+# Paths & Asset Setup
+# -----------------------------------------------------------------------------
+APP_DIR = os.path.dirname(__file__)
+ASSETS_DIR = os.path.join(APP_DIR, "assets")
 
-COMPONENTS_DIR = os.path.join(PROJECT_ROOT, "app", "components")
-if COMPONENTS_DIR not in sys.path:
-    sys.path.insert(0, COMPONENTS_DIR)
+favicon_path = os.path.join(ASSETS_DIR, "favicon.ico")
+logo_path = os.path.join(ASSETS_DIR, "logo.png")
+background_path = os.path.join(ASSETS_DIR, "background.jpg")
+hero_banner_path = os.path.join(ASSETS_DIR, "hero_banner.jpg")
 
-ASSETS_DIR = os.path.join(PROJECT_ROOT, "app", "assets")
-LOGO_PATH = os.path.join(ASSETS_DIR, "logo.png")
+# -----------------------------------------------------------------------------
+# Streamlit Page Config
+# -----------------------------------------------------------------------------
+st.set_page_config(
+    page_title="Transparent Market Platform",
+    page_icon=favicon_path,
+    layout="wide"
+)
 
-# -----------------------------
-# Load & Display Professional Header
-# -----------------------------
-if os.path.exists(LOGO_PATH):
-    with open(LOGO_PATH, "rb") as f:
-        logo_data = f.read()
-    encoded_logo = base64.b64encode(logo_data).decode()
-    logo_html = f'<img src="data:image/png;base64,{encoded_logo}" style="height:80px;" alt="Logo">'
-else:
-    logo_html = '<span style="font-size:72px;">🌐</span>'
+# -----------------------------------------------------------------------------
+# Auto-refresh every 5 seconds for live KPIs
+# -----------------------------------------------------------------------------
+refresh_interval_sec = 5
+st_autorefresh(interval=refresh_interval_sec * 1000, key="market_refresh")
 
-st.markdown(f"""
-    <div style="text-align:center; padding-top: 1rem; padding-bottom: 1rem;">
-        {logo_html}
-        <h1 style="margin-bottom:0.2rem;">Transparent Market Platform</h1>
-        <p style="font-size:1.1rem; color:gray;">
-            Clause-grounded • Risk-constrained • YC-ready Reinsurance Intelligence
-        </p>
-    </div>
-""", unsafe_allow_html=True)
+# -----------------------------------------------------------------------------
+# Sidebar Branding
+# -----------------------------------------------------------------------------
+with st.sidebar:
+    if os.path.exists(logo_path):
+        st.image(logo_path, use_container_width=True)  # <-- fixed here
+    else:
+        st.write("🏦 Transparent Market Platform")
 
-# -----------------------------
-# Dynamic Tab Imports (Hot Reload)
-# -----------------------------
-import components.bidding_tab as bidding_tab
-import components.clause_tab as clause_tab
-import components.marketlens_tab as marketlens_tab
-import components.governance_tab as governance_tab
+    st.markdown("---")
+    st.subheader("Navigation")
+    st.write("Use the tabs above to explore the platform features.")
+    st.markdown("---")
+    st.caption("© 2025 Reinsurance Analytics · YC Demo")
 
-def hot_reload_module(module):
-    """Reloads a tab module dynamically for live editing."""
-    try:
-        return importlib.reload(module)
-    except Exception as e:
-        st.error(f"Failed to reload module {module.__name__}: {e}")
-        return module
+# -----------------------------------------------------------------------------
+# Hero Section (Banner + Background)
+# -----------------------------------------------------------------------------
 
-# -----------------------------
-# Streamlit Tabs
-# -----------------------------
-tabs = st.tabs(["Live Market", "ClauseLens", "MarketLens", "Governance"])
+
+## Hero Banner (Full-width)
+#if os.path.exists(hero_banner_path):
+#    st.image(hero_banner_path, use_container_width=True)  # <-- fixed here
+#st.markdown("---")
+
+
+# -----------------------------------------------------------------------------
+# Initialize Persistent KPI Simulation
+# -----------------------------------------------------------------------------
+if "kpi_values" not in st.session_state:
+    st.session_state.kpi_values = {
+        "Net Profit ($)": 1_000_000.0,
+        "CVaR (95%)": 2_500_000.0,
+        "Fairness Score": 0.85,
+        "Bid Win Rate (%)": 55.0
+    }
+
+higher_is_better = {
+    "Net Profit ($)": True,
+    "CVaR (95%)": False,
+    "Fairness Score": True,
+    "Bid Win Rate (%)": True
+}
+
+metrics = {}
+for label, value in st.session_state.kpi_values.items():
+    drift = np.random.normal(0, value * 0.002)  # 0.2% drift per refresh
+    new_value = max(0, value + drift)
+    st.session_state.kpi_values[label] = new_value
+    metrics[label] = new_value
+
+# -----------------------------------------------------------------------------
+# KPI Cards with Color Coding and Trend Arrows
+# -----------------------------------------------------------------------------
+st.subheader("📊 Live Market KPIs")
+cols = st.columns(len(metrics))
+
+for (label, live_value), col in zip(metrics.items(), cols):
+    last_value = live_value / (1 + np.random.normal(0, 0.002))
+    drift = live_value - last_value
+    trend_up = drift >= 0
+    is_good = (trend_up and higher_is_better[label]) or (not trend_up and not higher_is_better[label])
+    arrow = "⬆️" if trend_up else "⬇️"
+    color = "green" if is_good else "red"
+
+    if "($" in label:
+        display_value = f"${live_value:,.0f}"
+    elif "%" in label:
+        display_value = f"{live_value:.1f}%"
+    else:
+        display_value = f"{live_value:.2f}"
+
+    col.markdown(
+        f"""
+        <div style="background-color:#f9f9f9;border-radius:8px;padding:12px;text-align:center;
+                    box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+            <div style="font-size:1.1em;font-weight:600;">{label}</div>
+            <div style="font-size:1.5em;color:{color};margin:4px 0;">{arrow} {display_value}</div>
+            <div style="font-size:0.9em;color:gray;">Updated {datetime.now().strftime('%H:%M:%S')}</div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+st.markdown("---")
+
+# -----------------------------------------------------------------------------
+# Multi-Tab Navigation
+# -----------------------------------------------------------------------------
+tabs = st.tabs(["📄 ClauseLens", "📈 MarketLens", "🤖 Bidding", "⚖️ Governance"])
 
 with tabs[0]:
-    bidding_tab = hot_reload_module(bidding_tab)
-    bidding_tab.render_bidding_tab()
+    clause_tab.render()
 
 with tabs[1]:
-    clause_tab = hot_reload_module(clause_tab)
-    clause_tab.render_clause_tab()
+    marketlens_tab.render()
 
 with tabs[2]:
-    marketlens_tab = hot_reload_module(marketlens_tab)
-    marketlens_tab.render_marketlens_tab()
+    bidding_tab.render()
 
 with tabs[3]:
-    governance_tab = hot_reload_module(governance_tab)
-    governance_tab.render_governance_tab()
-
-# -----------------------------
-# Demo Mode Footer
-# -----------------------------
-st.markdown(
-    """
-    <hr style="margin-top:2rem; margin-bottom:0.5rem;">
-    <p style="text-align:center; font-size:0.9rem; color:gray;">
-        🔄 Hot‑reload enabled – edit any module in <code>app/components/</code> and refresh to see updates instantly.
-    </p>
-    """,
-    unsafe_allow_html=True
-)
+    governance_tab.render()

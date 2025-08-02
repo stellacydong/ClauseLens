@@ -3,7 +3,7 @@ import pandas as pd
 from sklearn.preprocessing import OneHotEncoder
 
 # -----------------------------
-# Project Root and Paths
+# Paths
 # -----------------------------
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
@@ -21,12 +21,7 @@ DEMO_LABELS = os.path.join(DEMO_DIR, "sample_marketlens_labels.parquet")
 
 
 def preprocess_marketlens():
-    """
-    Prepares MarketLens features and labels from synthetic treaty data.
-    - Auto-renames attachment columns
-    - Skips missing numeric columns gracefully
-    - Prints warnings if schema is incomplete
-    """
+    """Load treaty data, generate features & labels, and save parquet files for MarketLens."""
     # -----------------------------
     # 1. Load Data
     # -----------------------------
@@ -35,89 +30,73 @@ def preprocess_marketlens():
         print(f"✅ Loaded {len(df)} synthetic treaties from {DATA_PROCESSED}")
     elif os.path.exists(DATA_RAW):
         df = pd.read_csv(DATA_RAW)
-        print(f"⚠️ Processed file not found, using raw data: {DATA_RAW}")
+        print(f"✅ Loaded {len(df)} raw treaties from {DATA_RAW}")
     else:
-        raise FileNotFoundError(
-            f"No treaty data found at:\n"
-            f"  - {DATA_PROCESSED}\n"
-            f"  - {DATA_RAW}\n\n"
-            f"👉 Run scripts/generate_synthetic_treaties.py first."
+        raise FileNotFoundError(f"No treaty data found at {DATA_PROCESSED} or {DATA_RAW}")
+
+    # -----------------------------
+    # 2. Auto-detect/rename columns
+    # -----------------------------
+    # Ensure numeric columns
+    expected_numeric = ["limit", "premium", "attachment"]
+    rename_map = {"attachment_point": "attachment", "att_point": "attachment"}
+    df.rename(columns=rename_map, inplace=True)
+
+    for col in expected_numeric:
+        if col not in df.columns:
+            print(f"⚠️ Column '{col}' not found. Creating dummy zeros.")
+            df[col] = 0.0
+
+    # -----------------------------
+    # 3. Generate Features
+    # -----------------------------
+    # Encode line_of_business and region if present
+    cat_cols = [c for c in ["line_of_business", "region"] if c in df.columns]
+    encoder = OneHotEncoder(sparse_output=False, handle_unknown="ignore")
+
+    X_cat = pd.DataFrame()
+    if cat_cols:
+        X_cat = pd.DataFrame(
+            encoder.fit_transform(df[cat_cols]),
+            columns=encoder.get_feature_names_out(cat_cols)
         )
 
-    # -----------------------------
-    # 2. Auto-Rename Attachment Column
-    # -----------------------------
-    attachment_aliases = ["attachment_point", "att_point", "att", "attach"]
-    for alias in attachment_aliases:
-        if alias in df.columns and "attachment" not in df.columns:
-            df.rename(columns={alias: "attachment"}, inplace=True)
-            print(f"🔄 Renamed '{alias}' to 'attachment'")
-            break
+    X_num = df[expected_numeric].copy()
+    X = pd.concat([X_num, X_cat], axis=1)
 
     # -----------------------------
-    # 3. Define Columns
+    # 4. Generate Labels
     # -----------------------------
-    cat_cols = ["line_of_business", "region"]
-    num_cols = ["limit", "attachment", "premium"]
+    if "acceptance" not in df.columns:
+        print("⚠️ 'acceptance' not found. Generating synthetic labels...")
+        df["acceptance"] = (df["premium"] / (df["limit"] + 1e-6)).apply(lambda x: 1 if x < 0.8 else 0)
 
-    # Check for missing columns
-    missing_cats = [c for c in cat_cols if c not in df.columns]
-    missing_nums = [c for c in num_cols if c not in df.columns]
+    if "expected_loss_ratio" not in df.columns:
+        print("⚠️ 'expected_loss_ratio' not found. Generating synthetic ratios...")
+        df["expected_loss_ratio"] = (df["limit"] / (df["premium"] + 1e-6)) * 0.05
+        df["expected_loss_ratio"] = df["expected_loss_ratio"].clip(0, 3.0)
 
-    if missing_cats:
-        print(f"⚠️ Warning: Missing categorical columns {missing_cats}. Filling with 'Unknown'.")
-        for c in missing_cats:
-            df[c] = "Unknown"
-
-    if missing_nums:
-        print(f"⚠️ Warning: Missing numeric columns {missing_nums}. Filling with zeros.")
-        for c in missing_nums:
-            df[c] = 0.0
+    labels = df[["acceptance", "expected_loss_ratio"]]
 
     # -----------------------------
-    # 4. Feature Engineering
+    # 5. Save Outputs
     # -----------------------------
-    enc = OneHotEncoder(sparse_output=False, handle_unknown='ignore')
-    cat_features = enc.fit_transform(df[cat_cols])
-    X = pd.DataFrame(cat_features, columns=enc.get_feature_names_out(cat_cols))
-    X[num_cols] = df[num_cols].reset_index(drop=True)
-
-    # -----------------------------
-    # 5. Label Engineering
-    # -----------------------------
-    # Acceptance likelihood: low premium-to-limit ratio = more likely to be accepted
-    with pd.option_context('mode.chained_assignment', None):
-        df["limit"] = df["limit"].replace(0, 1)  # Avoid div by zero
-
-    y_acceptance = (df["premium"] / df["limit"] < 0.05).astype(int)
-    y_lossratio = (df["limit"] / (df["attachment"] + 1)).clip(0, 5)
-
-    y = pd.DataFrame({
-        "acceptance": y_acceptance,
-        "loss_ratio": y_lossratio
-    })
-
-    # -----------------------------
-    # 6. Save Full Data
-    # -----------------------------
-    X.to_parquet(FEATURES_OUT)
-    y.to_parquet(LABELS_OUT)
+    os.makedirs(os.path.dirname(FEATURES_OUT), exist_ok=True)
+    X.to_parquet(FEATURES_OUT, index=False)
+    labels.to_parquet(LABELS_OUT, index=False)
 
     print(f"✅ Features saved to {FEATURES_OUT} ({X.shape})")
-    print(f"✅ Labels saved to {LABELS_OUT} ({y.shape})")
+    print(f"✅ Labels saved to {LABELS_OUT} ({labels.shape})")
 
     # -----------------------------
-    # 7. Save 1k-row Demo Subset
+    # 6. Demo Subset for Streamlit
     # -----------------------------
-    demo_X = X.sample(min(1000, len(X)), random_state=42)
-    demo_y = y.loc[demo_X.index]
+    X_demo = X.sample(min(1000, len(X)), random_state=42)
+    y_demo = labels.loc[X_demo.index]
 
-    demo_X.to_parquet(DEMO_FEATURES)
-    demo_y.to_parquet(DEMO_LABELS)
-
-    print(f"🎯 Demo subset saved:")
-    print(f"   - {DEMO_FEATURES} ({demo_X.shape})")
-    print(f"   - {DEMO_LABELS} ({demo_y.shape})")
+    X_demo.to_parquet(DEMO_FEATURES, index=False)
+    y_demo.to_parquet(DEMO_LABELS, index=False)
+    print(f"🎯 Demo subset saved:\n   - {DEMO_FEATURES} ({X_demo.shape})\n   - {DEMO_LABELS} ({y_demo.shape})")
 
 
 if __name__ == "__main__":

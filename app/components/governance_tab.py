@@ -1,43 +1,30 @@
-import os
-import pandas as pd
 import streamlit as st
+import pandas as pd
 
-# Self-contained PROJECT_ROOT
-PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
-OVERRIDE_LOG_PATH = os.path.join(PROJECT_ROOT, "data", "processed", "override_log.csv")
+def render():
+    st.header("⚖️ Governance & Human-in-the-Loop Oversight")
+    st.write(
+        """
+        Review agent decision traces, manually override policies, and ensure CVaR and regulatory compliance.
+        """
+    )
 
+    # Policy trace table (mock)
+    trace = pd.DataFrame({
+        "step": [1, 2, 3],
+        "action": ["Bid 1.2M", "Bid 1.5M", "Hold"],
+        "reward": [120_000, 150_000, 90_000],
+        "compliant": [True, True, False]
+    })
+    st.subheader("Policy Trace")
+    st.dataframe(trace)
 
-def render_governance_tab():
-    st.subheader("Human-in-the-Loop Governance & Stress Tests")
+    # Override demo
+    st.subheader("Manual Policy Override")
+    override_action = st.selectbox("Override next action?", ["No Override", "Force Bid", "Force Hold"])
+    if override_action != "No Override":
+        st.warning(f"Next simulation step will use override: {override_action}")
 
-    if st.button("⚡ Load Governance Tools"):
-        from governance.policy_trace import load_policy_traces, plot_policy_traces
-        from governance.override_interface import find_high_risk_bids, override_policy
-
-        # Policy Traces
-        try:
-            df_traces = load_policy_traces(200)
-            st.plotly_chart(plot_policy_traces(df_traces), use_container_width=True)
-        except Exception as e:
-            st.error(f"Policy trace visualization failed: {e}")
-
-        # High-risk bids
-        risky_bids = find_high_risk_bids()
-        st.markdown(f"### High-Risk Bids (Compliance < 0.6): {len(risky_bids)}")
-        st.dataframe(risky_bids.head(10), use_container_width=True)
-
-        # Manual Override
-        if st.button("🚨 Trigger Manual Override for 5 Bids"):
-            if not risky_bids.empty:
-                override_policy(risky_bids["bid_id"].head(5), reason="YC Demo Manual Override")
-                st.success("✅ Overrides logged!")
-            else:
-                st.info("No high-risk bids found to override.")
-
-        # Show Override Log
-        if os.path.exists(OVERRIDE_LOG_PATH):
-            st.markdown("### Override Log")
-            log_df = pd.read_csv(OVERRIDE_LOG_PATH)
-            st.dataframe(log_df.tail(20), use_container_width=True)
-        else:
-            st.info("No overrides logged yet.")
+    # Governance summary
+    st.metric("Compliance Rate", "92%")
+    st.metric("Manual Overrides", "1")

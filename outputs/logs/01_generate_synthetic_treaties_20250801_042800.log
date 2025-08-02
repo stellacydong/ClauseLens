@@ -1,0 +1,4 @@
+2025-08-01 04:28:00,576 - INFO - Logger initialized. Output -> outputs/logs/01_generate_synthetic_treaties_20250801_042800.log
+2025-08-01 04:28:00,581 - INFO - Generated synthetic dataset with 10000 treaties.
+2025-08-01 04:28:00,639 - INFO - Saved synthetic treaties -> data/processed/treaties_synthetic.csv and data/processed/treaties_synthetic.parquet
+2025-08-01 04:28:00,639 - INFO - Synthetic treaty generation completed successfully.

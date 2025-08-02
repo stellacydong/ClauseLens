@@ -1,0 +1,8 @@
+2025-08-01 04:28:44,379 - INFO - Logger initialized. Output -> outputs/logs/02_process_synthetic_data_20250801_042844.log
+2025-08-01 04:28:44,385 - INFO - Loaded dataset with 10000 rows and 8 columns from data/processed/treaties_synthetic.csv
+2025-08-01 04:28:44,388 - INFO - After cleaning: 10000 rows remain.
+2025-08-01 04:28:44,390 - INFO - Feature engineering complete.
+2025-08-01 04:28:44,390 - INFO - Labels generated for MarketLens models.
+2025-08-01 04:28:44,412 - INFO - Saved MarketLens features -> data/processed/marketlens_features.parquet
+2025-08-01 04:28:44,412 - INFO - Saved MarketLens labels   -> data/processed/marketlens_labels.parquet
+2025-08-01 04:28:44,412 - INFO - Synthetic treaty processing completed successfully.

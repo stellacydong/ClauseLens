@@ -4,94 +4,117 @@ import pandas as pd
 import xgboost as xgb
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import roc_auc_score, mean_squared_error
+from math import sqrt
 
 # -----------------------------
-# Project Root and Paths
+# Project Paths
 # -----------------------------
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 FEATURES_PATH = os.path.join(PROJECT_ROOT, "data", "processed", "marketlens_features.parquet")
 LABELS_PATH = os.path.join(PROJECT_ROOT, "data", "processed", "marketlens_labels.parquet")
-MODEL_DIR = os.path.join(PROJECT_ROOT, "marketlens", "models")
 
+MODEL_DIR = os.path.join(PROJECT_ROOT, "marketlens", "models")
 os.makedirs(MODEL_DIR, exist_ok=True)
 
+DEMO_DIR = os.path.join(PROJECT_ROOT, "data", "demo")
+os.makedirs(DEMO_DIR, exist_ok=True)
 
-def train_marketlens_models():
-    """
-    Train MarketLens models:
-    1. XGBoost Classifier -> Acceptance likelihood
-    2. XGBoost Regressor -> Expected loss ratio
-    Saves models into marketlens/models/
-    """
-    # -----------------------------
-    # 1. Load Features & Labels
-    # -----------------------------
+ACCEPTANCE_MODEL_PKL = os.path.join(MODEL_DIR, "xgb_acceptance.pkl")
+LOSS_MODEL_PKL = os.path.join(MODEL_DIR, "xgb_lossratio.pkl")
+
+# Optional JSON boosters for model inspection
+ACCEPTANCE_JSON = os.path.join(MODEL_DIR, "xgb_acceptance.json")
+LOSS_JSON = os.path.join(MODEL_DIR, "xgb_lossratio.json")
+
+# Demo copies for Streamlit
+ACCEPTANCE_MODEL_PKL_DEMO = os.path.join(DEMO_DIR, "xgb_acceptance.pkl")
+
+
+# -----------------------------
+# Load Data
+# -----------------------------
+def load_data():
+    """Load preprocessed features and labels for MarketLens."""
     if not os.path.exists(FEATURES_PATH) or not os.path.exists(LABELS_PATH):
-        raise FileNotFoundError(
-            "❌ Missing processed features or labels. Run `marketlens/preprocess.py` first."
-        )
+        raise FileNotFoundError("❌ Preprocessed features/labels not found. Run preprocess.py first.")
 
     X = pd.read_parquet(FEATURES_PATH)
     y = pd.read_parquet(LABELS_PATH)
 
-    print(f"✅ Loaded features {X.shape} and labels {y.shape}")
+    if "acceptance" not in y.columns or "expected_loss_ratio" not in y.columns:
+        raise KeyError("❌ Labels must include 'acceptance' and 'expected_loss_ratio' columns.")
+
+    return X, y["acceptance"], y["expected_loss_ratio"]
+
+
+# -----------------------------
+# Training Function
+# -----------------------------
+def train_xgb_models():
+    print("🚀 Training MarketLens models...")
+
+    X, y_accept, y_loss = load_data()
 
     # -----------------------------
-    # 2. Train Acceptance Likelihood Model (Classification)
+    # 1. Acceptance Model (Classifier)
     # -----------------------------
-    print("\n🎯 Training acceptance likelihood model...")
+    X_train, X_test, y_train, y_test = train_test_split(X, y_accept, test_size=0.2, random_state=42)
 
-    X_train, X_val, y_train, y_val = train_test_split(
-        X, y["acceptance"], test_size=0.2, random_state=42
-    )
-
-    model_acceptance = xgb.XGBClassifier(
-        eval_metric="logloss",
-        n_estimators=200,
+    clf = xgb.XGBClassifier(
+        n_estimators=300,
         max_depth=6,
         learning_rate=0.05,
         subsample=0.8,
         colsample_bytree=0.8,
-        tree_method="hist"  # Efficient training for large datasets
+        random_state=42,
+        eval_metric="auc"
     )
+    clf.fit(X_train, y_train)
+    preds = clf.predict_proba(X_test)[:, 1]
+    auc = roc_auc_score(y_test, preds)
+    print(f"✅ Acceptance Model AUC: {auc:.4f}")
 
-    model_acceptance.fit(X_train, y_train)
-    auc = roc_auc_score(y_val, model_acceptance.predict_proba(X_val)[:, 1])
-    print(f"✅ Acceptance Model AUC: {auc:.3f}")
+    # Save model for SHAP and fairness audit
+    joblib.dump(clf, ACCEPTANCE_MODEL_PKL)
+    joblib.dump(clf, ACCEPTANCE_MODEL_PKL_DEMO)
+    print(f"💾 Acceptance model saved to {ACCEPTANCE_MODEL_PKL} and demo copy to {ACCEPTANCE_MODEL_PKL_DEMO}")
 
-    acceptance_model_path = os.path.join(MODEL_DIR, "xgb_acceptance.pkl")
-    joblib.dump(model_acceptance, acceptance_model_path)
-    print(f"💾 Saved acceptance model to {acceptance_model_path}")
+    # Optional: save JSON booster
+    clf.get_booster().save_model(ACCEPTANCE_JSON)
 
     # -----------------------------
-    # 3. Train Expected Loss Ratio Model (Regression)
+    # 2. Loss Ratio Model (Regressor)
     # -----------------------------
-    print("\n🎯 Training expected loss ratio model...")
+    X_train, X_test, y_train, y_test = train_test_split(X, y_loss, test_size=0.2, random_state=42)
 
-    X_train, X_val, y_train, y_val = train_test_split(
-        X, y["loss_ratio"], test_size=0.2, random_state=42
-    )
-
-    model_lossratio = xgb.XGBRegressor(
-        n_estimators=200,
+    reg = xgb.XGBRegressor(
+        n_estimators=300,
         max_depth=6,
         learning_rate=0.05,
         subsample=0.8,
         colsample_bytree=0.8,
-        tree_method="hist"
+        random_state=42,
     )
+    reg.fit(X_train, y_train)
+    preds = reg.predict(X_test)
 
-    model_lossratio.fit(X_train, y_train)
-    mse = mean_squared_error(y_val, model_lossratio.predict(X_val))
-    print(f"✅ Loss Ratio Model MSE: {mse:.3f}")
+    # Compute RMSE (manual sqrt for compatibility)
+    rmse = sqrt(mean_squared_error(y_test, preds))
+    print(f"✅ Loss Ratio Model RMSE: {rmse:.4f}")
 
-    lossratio_model_path = os.path.join(MODEL_DIR, "xgb_lossratio.pkl")
-    joblib.dump(model_lossratio, lossratio_model_path)
-    print(f"💾 Saved loss ratio model to {lossratio_model_path}")
+    # Save model
+    joblib.dump(reg, LOSS_MODEL_PKL)
+    print(f"💾 Loss ratio model saved to {LOSS_MODEL_PKL}")
 
-    print("\n🎉 Training complete! MarketLens models ready for use in the YC demo.")
+    # Optional: save JSON booster
+    reg.get_booster().save_model(LOSS_JSON)
+
+    print("\n🎉 Training complete! Models are ready for SHAP, fairness audit, and MarketLens dashboard.")
 
 
+# -----------------------------
+# Main
+# -----------------------------
 if __name__ == "__main__":
-    train_marketlens_models()
+    train_xgb_models()

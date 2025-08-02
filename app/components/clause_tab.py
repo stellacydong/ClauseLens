@@ -1,42 +1,39 @@
-import os
-import pandas as pd
 import streamlit as st
-from clauselens.retrieval import ClauseRetriever
-from clauselens.explain import ClauseExplainer
+import pandas as pd
+import os
 
-# Self-contained PROJECT_ROOT
-PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
-CLAUSE_CSV = os.path.join(PROJECT_ROOT, "clauselens", "legal_corpus", "clauses.csv")
-EMBED_PATH = os.path.join(PROJECT_ROOT, "clauselens", "legal_corpus", "embeddings.npy")
-FAISS_PATH = os.path.join(PROJECT_ROOT, "clauselens", "legal_corpus", "faiss_index.bin")
-DATA_DEMO_DIR = os.path.join(PROJECT_ROOT, "data", "demo")
+LEGAL_CORPUS_PATH = os.path.join("..", "clauselens", "legal_corpus", "clauses.csv")
 
+def render():
+    st.header("📄 ClauseLens: Clause-Grounded Insights")
 
-def render_clause_tab():
-    st.subheader("Clause-Grounded Quote Explanations")
-    st.info("ClauseLens loads lazily for performance.")
+    st.write(
+        """
+        ClauseLens retrieves and analyzes treaty clauses for interpretability and governance.
+        Use the search to explore your legal corpus or visualize embeddings.
+        """
+    )
 
-    if st.button("⚡ Load ClauseLens Engine"):
-        with st.spinner("Loading ClauseLens..."):
-            retriever = ClauseRetriever(CLAUSE_CSV, EMBED_PATH, FAISS_PATH)
-            explainer = ClauseExplainer()
+    # Search Box
+    query = st.text_input("🔍 Search clauses by keyword")
+    
+    # Load clause corpus (sample for demo)
+    if os.path.exists(LEGAL_CORPUS_PATH):
+        clauses = pd.read_csv(LEGAL_CORPUS_PATH).head(10)
+    else:
+        clauses = pd.DataFrame({
+            "clause_id": [1, 2, 3],
+            "text": ["Loss payable clause...", "Catastrophe event clause...", "Exclusion clause..."]
+        })
 
-        treaties_path = os.path.join(DATA_DEMO_DIR, "sample_treaties.csv")
-        if os.path.exists(treaties_path):
-            sample_treaty = pd.read_csv(treaties_path).sample(1).iloc[0].to_dict()
-        else:
-            sample_treaty = {"line_of_business": "Property", "region": "EU", "limit": 1_000_000, "premium": 40_000}
+    # Show results
+    if query:
+        results = clauses[clauses['text'].str.contains(query, case=False, na=False)]
+        st.subheader("Search Results")
+        st.dataframe(results)
+    else:
+        st.info("Enter a keyword to search clauses.")
 
-        with st.spinner("Generating explanation..."):
-            clauses = retriever.semantic_retrieve(sample_treaty, top_k=3)
-            explanation = explainer.explain_quote(sample_treaty, clauses, bid_value=5_000_000)
+    # Upload Option for Live Demos
+    st.file_uploader("📂 Upload new clause CSV for testing", type=["csv"])
 
-        st.write("### Sample Treaty")
-        st.json(sample_treaty)
-
-        st.write("### Retrieved Clauses")
-        for c in clauses:
-            st.markdown(f"- **{c['clause_text']}** *(Jurisdiction: {c['jurisdiction']})*")
-
-        st.write("### Live Explanation")
-        st.info(explanation)

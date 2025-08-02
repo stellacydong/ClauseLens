@@ -1,43 +1,35 @@
-import os
-import pandas as pd
 import streamlit as st
+import pandas as pd
+import os
 
-# Self-contained PROJECT_ROOT
-PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
-DATA_DEMO_DIR = os.path.join(PROJECT_ROOT, "data", "demo")
-MARKETLENS_DIR = os.path.join(PROJECT_ROOT, "marketlens", "models")
+MARKETLENS_DATA_PATH = os.path.join("..", "data", "processed", "marketlens_features.parquet")
 
+def render():
+    st.header("📈 MarketLens Benchmarking & Fairness")
+    st.write(
+        """
+        Evaluate treaty performance using ML models, SHAP explainability, and fairness auditing.
+        """
+    )
 
-def render_marketlens_tab():
-    st.subheader("Market Benchmarking & Fairness Audits")
-    st.info("Click to load MarketLens demo data.")
+    # Load example data
+    if os.path.exists(MARKETLENS_DATA_PATH):
+        df = pd.read_parquet(MARKETLENS_DATA_PATH).head(20)
+    else:
+        df = pd.DataFrame({
+            "treaty_id": [101, 102, 103],
+            "expected_loss_ratio": [0.42, 0.35, 0.55],
+            "acceptance_likelihood": [0.88, 0.92, 0.75]
+        })
 
-    if st.button("⚡ Load MarketLens"):
-        features_path = os.path.join(DATA_DEMO_DIR, "sample_marketlens.parquet")
-        labels_path = os.path.join(DATA_DEMO_DIR, "sample_marketlens_labels.parquet")
-        shap_plot = os.path.join(MARKETLENS_DIR, "shap_summary.png")
-        fairness_csv = os.path.join(MARKETLENS_DIR, "fairness_audit.csv")
+    # KPIs
+    st.metric("Average Expected Loss Ratio", f"{df['expected_loss_ratio'].mean():.2%}")
+    st.metric("Average Acceptance Likelihood", f"{df['acceptance_likelihood'].mean():.2%}")
 
-        # Sample features & labels
-        if os.path.exists(features_path) and os.path.exists(labels_path):
-            st.markdown("### Sample Features")
-            st.dataframe(pd.read_parquet(features_path).head(10), use_container_width=True)
-            st.markdown("### Sample Labels")
-            st.dataframe(pd.read_parquet(labels_path).head(10), use_container_width=True)
-        else:
-            st.warning("Run `marketlens/preprocess.py` to generate demo data.")
+    # Table
+    st.subheader("MarketLens Sample Data")
+    st.dataframe(df)
 
-        # SHAP Summary Plot
-        if os.path.exists(shap_plot):
-            st.markdown("### SHAP Feature Importance")
-            st.image(shap_plot, use_column_width=True)
-        else:
-            st.info("Run `marketlens/fairness_audit.py` to generate SHAP summary.")
-
-        # Fairness Audit Table
-        if os.path.exists(fairness_csv):
-            st.markdown("### Fairness Audit Results")
-            fairness_df = pd.read_csv(fairness_csv)
-            st.dataframe(fairness_df, use_container_width=True)
-        else:
-            st.info("Run `marketlens/fairness_audit.py` to generate fairness metrics.")
+    # SHAP / Fairness placeholder
+    st.subheader("🔎 Fairness & Explainability")
+    st.info("SHAP visualizations and fairness metrics will be rendered here in a real deployment.")
